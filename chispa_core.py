@@ -178,3 +178,68 @@ Respond in {language}. One question only."""
         types.Content(role="user", parts=[types.Part(text=prompt)])
     ]
     return _call(client, contents)
+
+
+def _quality_check(client: genai.Client, output: str, user_task_details: str, language: str) -> bool:
+    prompt = f"""Score this AI output on 3 criteria. Return JSON {{"pass": true}} or {{"pass": false}}.
+
+Criteria:
+1. Is the output specific to these user details: "{user_task_details}"? (not generic filler)
+2. Is it in language "{language}" with appropriate tone?
+3. Would a real person use this as-is without major editing?
+
+Output to score:
+{output}"""
+
+    config = types.GenerateContentConfig(
+        temperature=0.1,
+        max_output_tokens=50,
+        response_mime_type="application/json",
+    )
+    response = client.models.generate_content(
+        model=MODEL,
+        config=config,
+        contents=[types.Content(role="user", parts=[types.Part(text=prompt)])]
+    )
+    try:
+        return json.loads(response.text or "{}").get("pass", True)
+    except (json.JSONDecodeError, ValueError):
+        return True
+
+
+def run_win_execute(
+    client: genai.Client,
+    conversation_history: list,
+    selected_use_case: dict,
+    user_task_details: str,
+    role: str,
+    language: str,
+) -> dict:
+    base_prompt = f"""Input: {selected_use_case}, {user_task_details}, {role}, {language}
+
+The user provided the details needed. Now do the task.
+Complete the task fully and well. Do not explain what you are doing. Just do it.
+After the output, add ONE short line asking if this looks good.
+
+Respond in {language}."""
+
+    for attempt in range(2):
+        extra = ""
+        if attempt == 1:
+            extra = "\nThe previous output was too generic. Use the exact details provided. Make it specific, professional, and immediately usable."
+
+        contents = list(conversation_history) + [
+            types.Content(role="user", parts=[types.Part(text=base_prompt + extra)])
+        ]
+        output = _call(client, contents)
+
+        if attempt == 0 and not _quality_check(client, output, user_task_details, language):
+            continue
+
+        sentences = [s.strip() for s in output.split(".") if s.strip()]
+        summary = ". ".join(sentences[:2]) + ("." if sentences else "")
+        return {"output": output, "summary": summary}
+
+    sentences = [s.strip() for s in output.split(".") if s.strip()]
+    summary = ". ".join(sentences[:2]) + ("." if sentences else "")
+    return {"output": output, "summary": summary}

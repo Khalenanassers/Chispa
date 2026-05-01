@@ -159,3 +159,59 @@ def test_run_win_open_returns_question():
     result = run_win_open(client, history, selected_use_case, "office administrator", "en")
     assert isinstance(result, str)
     assert len(result) > 0
+
+
+SAMPLE_EMAIL_OUTPUT = (
+    "Dear Maria,\n\nHere is the weekly logistics update for the Hamburg depot.\n"
+    "All shipments are on schedule. Three deliveries pending for Friday.\n\nBest regards,\nRosa"
+)
+
+
+def test_run_win_execute_returns_output_and_summary():
+    from chispa_core import run_win_execute, build_history
+    client = _mock_client(SAMPLE_EMAIL_OUTPUT)
+    history = build_history([{"role": "user", "text": "weekly update email for Maria, formal"}])
+    selected_use_case = {"id": 1, "label": "Write emails faster", "description": "Save time"}
+    result = run_win_execute(
+        client, history, selected_use_case,
+        "weekly logistics update for manager Maria, formal tone",
+        "office administrator", "en"
+    )
+    assert "output" in result
+    assert "summary" in result
+    assert len(result["output"]) > 0
+    assert len(result["summary"]) > 0
+
+
+def test_run_win_execute_summary_is_shorter_than_output():
+    from chispa_core import run_win_execute, build_history
+    client = _mock_client(SAMPLE_EMAIL_OUTPUT)
+    history = build_history([{"role": "user", "text": "update email"}])
+    selected_use_case = {"id": 1, "label": "Write emails faster", "description": "Save time"}
+    result = run_win_execute(
+        client, history, selected_use_case,
+        "update email for Maria", "office administrator", "en"
+    )
+    assert len(result["summary"]) <= len(result["output"])
+
+
+def test_run_win_execute_regenerates_on_quality_fail():
+    from chispa_core import run_win_execute, build_history
+
+    short_generic = "Here is your email."
+    good_output = SAMPLE_EMAIL_OUTPUT
+
+    client = MagicMock()
+    resp1 = MagicMock(); resp1.text = short_generic
+    resp2 = MagicMock(); resp2.text = good_output
+    quality_fail = MagicMock(); quality_fail.text = '{"pass": false}'
+    client.models.generate_content.side_effect = [resp1, quality_fail, resp2]
+
+    history = build_history([{"role": "user", "text": "weekly update"}])
+    selected_use_case = {"id": 1, "label": "Write emails faster", "description": "Save time"}
+    result = run_win_execute(
+        client, history, selected_use_case,
+        "weekly logistics update for Maria", "office administrator", "en"
+    )
+    assert client.models.generate_content.call_count == 3
+    assert result["output"] == good_output
