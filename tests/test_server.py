@@ -16,7 +16,7 @@ def test_health_returns_ok(client):
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "ok"
-    assert data["model"] == "gemma-4-26b-it"
+    assert data["model"] == "gemma-4-26b-a4b-it"
 
 
 def test_chat_unknown_stage_returns_422(client):

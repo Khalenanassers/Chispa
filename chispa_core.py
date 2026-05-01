@@ -18,7 +18,7 @@ Session structure you follow silently:
 DISCOVER → PICK → WIN → PILL → MAP
 You know which stage you are in. The user does not need to know."""
 
-MODEL = "gemma-4-26b-it"
+MODEL = "gemma-4-26b-a4b-it"
 TEMPERATURE = 0.7
 MAX_TOKENS = 1024
 
