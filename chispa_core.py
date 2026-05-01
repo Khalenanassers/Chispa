@@ -115,3 +115,19 @@ Return ONLY valid JSON. No explanation. No preamble.
         return data
 
     raise ValueError("run_discovery: failed to get valid non-generic response")
+
+
+_PILL_KEYWORDS = {
+    1: ["write", "draft", "compose", "email", "letter", "message", "report"],
+    2: ["summarize", "summary", "organize", "structure", "notes", "recap"],
+    3: ["share", "upload", "data", "spreadsheet", "document", "analyze"],
+    4: ["decide", "approve", "review", "act", "action"],
+}
+
+
+def select_pill(selected_use_case: dict) -> int:
+    text = f"{selected_use_case.get('label', '')} {selected_use_case.get('description', '')}".lower()
+    for pill_id in [2, 3, 4, 1]:
+        if any(kw in text for kw in _PILL_KEYWORDS[pill_id]):
+            return pill_id
+    return 1

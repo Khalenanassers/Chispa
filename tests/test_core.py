@@ -115,3 +115,27 @@ def test_run_discovery_retries_on_generic_use_cases():
     result = run_discovery(client, history)
     assert client.models.generate_content.call_count == 2
     assert result["use_cases"][0]["label"] == "Write emails faster"
+
+
+def test_select_pill_writing():
+    from chispa_core import select_pill
+    uc = {"id": 1, "label": "Write emails faster", "description": "Draft weekly updates quickly"}
+    assert select_pill(uc) == 1
+
+
+def test_select_pill_summarizing():
+    from chispa_core import select_pill
+    uc = {"id": 2, "label": "Summarize reports", "description": "Organize key points from documents"}
+    assert select_pill(uc) == 2
+
+
+def test_select_pill_sharing_data():
+    from chispa_core import select_pill
+    uc = {"id": 3, "label": "Analyze spreadsheet", "description": "Share your data and get insights"}
+    assert select_pill(uc) == 3
+
+
+def test_select_pill_defaults_to_1():
+    from chispa_core import select_pill
+    uc = {"id": 3, "label": "Something unusual", "description": "An edge case not matching any keyword"}
+    assert select_pill(uc) == 1
