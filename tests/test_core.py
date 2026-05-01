@@ -215,3 +215,32 @@ def test_run_win_execute_regenerates_on_quality_fail():
     )
     assert client.models.generate_content.call_count == 3
     assert result["output"] == good_output
+
+
+def test_run_win_confirm_returns_string():
+    from chispa_core import run_win_confirm, build_history
+    client = _mock_client("You just did that in 3 minutes. Let me show you what you actually did.")
+    history = build_history([{"role": "user", "text": "This looks great!"}])
+    result = run_win_confirm(client, history, "en")
+    assert isinstance(result, str)
+    assert len(result) > 0
+
+
+def test_run_pill_returns_string():
+    from chispa_core import run_pill, build_history
+    client = _mock_client("What you just did is called prompting. Think of it like briefing a colleague. What else do you brief people on?")
+    history = build_history([{"role": "user", "text": "This is great!"}])
+    selected_use_case = {"id": 1, "label": "Write emails faster", "description": "Save time"}
+    result = run_pill(client, history, 1, selected_use_case, "office administrator", "en", "Weekly logistics update email for Maria.")
+    assert isinstance(result, str)
+    assert len(result) > 0
+
+
+def test_run_map_returns_string():
+    from chispa_core import run_map, build_history
+    client = _mock_client("1. Use AI to draft your next meeting recap.\n2. Upload a document and ask AI for the 3 key points.\n3. Ask AI to help you find the right tone for a difficult message.")
+    history = build_history([{"role": "user", "text": "Got it!"}])
+    selected_use_case = {"id": 1, "label": "Write emails faster", "description": "Save time"}
+    result = run_map(client, history, "office administrator", selected_use_case, 1, "en")
+    assert isinstance(result, str)
+    assert len(result) > 0

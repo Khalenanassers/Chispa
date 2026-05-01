@@ -243,3 +243,93 @@ Respond in {language}."""
     sentences = [s.strip() for s in output.split(".") if s.strip()]
     summary = ". ".join(sentences[:2]) + ("." if sentences else "")
     return {"output": output, "summary": summary}
+
+
+def run_win_confirm(client: genai.Client, conversation_history: list, language: str) -> str:
+    prompt = f"""Input: {language}
+
+The user just confirmed their AI output looks good. This is their first win.
+Write one sentence that celebrates this moment — warm, genuine, not over the top.
+Then transition: tell them you want to share something quick about what just happened.
+
+Respond in {language}. Two sentences maximum."""
+
+    contents = list(conversation_history) + [
+        types.Content(role="user", parts=[types.Part(text=prompt)])
+    ]
+    return _call(client, contents)
+
+
+_PILL_NAMES = {
+    1: "Prompting",
+    2: "AI strengths",
+    3: "Context",
+    4: "Hallucination",
+}
+
+_PILL_DEFINITIONS = {
+    1: "What a prompt is + when to be specific vs vague",
+    2: "What AI is genuinely good at + when NOT to use it",
+    3: "What context means in AI + how much to share at work",
+    4: "What hallucination is + when to verify AI output",
+}
+
+
+def run_pill(
+    client: genai.Client,
+    conversation_history: list,
+    pill_id: int,
+    selected_use_case: dict,
+    role: str,
+    language: str,
+    task_output_summary: str,
+) -> str:
+    prompt = f"""Input: {pill_id}, {selected_use_case}, {role}, {language}, {task_output_summary}
+
+Deliver Pill {pill_id} to this user. They are a {role} who just completed: {selected_use_case['label']}.
+
+Pill definition: {_PILL_DEFINITIONS[pill_id]}
+
+Format your pill EXACTLY like this:
+1. One sentence naming the concept in plain language (no jargon)
+2. One analogy drawn from their specific job/industry (not generic)
+3. One question that connects this concept to something they already do at work
+
+Do NOT use bullet points. Write it as natural speech.
+Respond in {language}."""
+
+    contents = list(conversation_history) + [
+        types.Content(role="user", parts=[types.Part(text=prompt)])
+    ]
+    return _call(client, contents)
+
+
+def run_map(
+    client: genai.Client,
+    conversation_history: list,
+    role: str,
+    selected_use_case: dict,
+    pill_id: int,
+    language: str,
+) -> str:
+    pill_concept = _PILL_NAMES.get(pill_id, "Prompting")
+    prompt = f"""Input: {role}, {selected_use_case}, {pill_concept}, {language}
+
+The user is a {role}. They just completed their first AI task: {selected_use_case['label']}.
+They learned about: {pill_concept}.
+
+Generate their personal AI map: exactly 3 next steps they can take THIS WEEK.
+
+Rules:
+- Each step must be specific to their role. Not generic advice.
+- Each step must be something they can do in under 30 minutes.
+- Each step must build on what they just did — not start over.
+- No jargon. No tool names they don't know yet. One free tool recommendation maximum per step.
+- Format as numbered list. One sentence per step. Action verb to start.
+
+Respond in {language}."""
+
+    contents = list(conversation_history) + [
+        types.Content(role="user", parts=[types.Part(text=prompt)])
+    ]
+    return _call(client, contents)
