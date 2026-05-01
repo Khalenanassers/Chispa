@@ -223,6 +223,7 @@ After the output, add ONE short line asking if this looks good.
 
 Respond in {language}."""
 
+    output = ""
     for attempt in range(2):
         extra = ""
         if attempt == 1:
