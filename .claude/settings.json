@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "powershell",
+            "command": "Write-Output '{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"SESSION SETUP — invoke these skills via the Skill tool before responding: (1) caveman — compressed comms, (2) superpowers:brainstorming — before any feature/UI work, (3) ui-ux-pro-max — for any screen design, (4) frontend-design — for React/HTML builds, (5) superpowers:writing-plans — before multi-step implementation, (6) superpowers:systematic-debugging — on any bug.\"}}'",
+            "statusMessage": "Loading Chispa skills..."
+          }
+        ]
+      }
+    ]
+  }
+}
