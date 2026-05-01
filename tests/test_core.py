@@ -149,3 +149,13 @@ def test_run_pick_confirm_returns_string():
     result = run_pick_confirm(client, history, selected_use_case, "office administrator", "en")
     assert isinstance(result, str)
     assert len(result) > 0
+
+
+def test_run_win_open_returns_question():
+    from chispa_core import run_win_open, build_history
+    client = _mock_client("Tell me: who is this email going to, and what needs to be in it?")
+    history = build_history([{"role": "user", "text": "I want to write emails faster"}])
+    selected_use_case = {"id": 1, "label": "Write emails faster", "description": "Save time on updates"}
+    result = run_win_open(client, history, selected_use_case, "office administrator", "en")
+    assert isinstance(result, str)
+    assert len(result) > 0

@@ -153,3 +153,28 @@ Respond in {language}. One sentence only. No questions."""
         types.Content(role="user", parts=[types.Part(text=prompt)])
     ]
     return _call(client, contents)
+
+
+def run_win_open(
+    client: genai.Client,
+    conversation_history: list,
+    selected_use_case: dict,
+    role: str,
+    language: str,
+) -> str:
+    prompt = f"""Input: {selected_use_case}, {role}, {language}
+
+The user is a {role}. They chose to work on: {selected_use_case['label']} — {selected_use_case['description']}.
+
+Your job now: guide them to complete this task using AI right now.
+
+Step 1: Ask them for the specific details you need to do this task FOR them.
+- Ask for ONLY what is strictly necessary. One question maximum.
+- Be specific. Not "tell me more" — ask for the exact input you need.
+
+Respond in {language}. One question only."""
+
+    contents = list(conversation_history) + [
+        types.Content(role="user", parts=[types.Part(text=prompt)])
+    ]
+    return _call(client, contents)
