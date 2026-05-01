@@ -45,3 +45,73 @@ def test_build_client_returns_client():
         client = build_client("fake-key")
         mock_client_cls.assert_called_once_with(api_key="fake-key")
         assert client is not None
+
+
+import json
+
+VALID_DISCOVERY_JSON = json.dumps({
+    "role": "office administrator",
+    "language": "en",
+    "use_cases": [
+        {"id": 1, "label": "Write emails faster", "description": "Save time on weekly updates"},
+        {"id": 2, "label": "Summarize documents", "description": "Read reports in seconds"},
+        {"id": 3, "label": "Draft meeting notes", "description": "Never miss action items"},
+    ]
+})
+
+GENERIC_DISCOVERY_JSON = json.dumps({
+    "role": "office administrator",
+    "language": "en",
+    "use_cases": [
+        {"id": 1, "label": "Save time", "description": "Be more productive"},
+        {"id": 2, "label": "Increase efficiency", "description": "Improve workflow"},
+        {"id": 3, "label": "Work smarter", "description": "Do more with less"},
+    ]
+})
+
+
+def _mock_client(response_text: str) -> MagicMock:
+    client = MagicMock()
+    mock_resp = MagicMock()
+    mock_resp.text = response_text
+    client.models.generate_content.return_value = mock_resp
+    return client
+
+
+def test_run_discovery_returns_parsed_dict():
+    from chispa_core import run_discovery, build_history
+    client = _mock_client(VALID_DISCOVERY_JSON)
+    history = build_history([{"role": "user", "text": "I work as an office administrator in logistics"}])
+    result = run_discovery(client, history)
+    assert result["role"] == "office administrator"
+    assert result["language"] == "en"
+    assert len(result["use_cases"]) == 3
+    assert result["use_cases"][0]["id"] == 1
+
+
+def test_run_discovery_retries_on_malformed_json():
+    from chispa_core import run_discovery, build_history
+    client = MagicMock()
+    bad_resp = MagicMock()
+    bad_resp.text = "not valid json"
+    good_resp = MagicMock()
+    good_resp.text = VALID_DISCOVERY_JSON
+    client.models.generate_content.side_effect = [bad_resp, good_resp]
+    history = build_history([{"role": "user", "text": "I work in HR"}])
+    result = run_discovery(client, history)
+    assert client.models.generate_content.call_count == 2
+    assert result["role"] == "office administrator"
+
+
+def test_run_discovery_retries_on_generic_use_cases():
+    from chispa_core import run_discovery, build_history
+    client = MagicMock()
+    generic_resp = MagicMock()
+    generic_resp.text = GENERIC_DISCOVERY_JSON
+    good_resp = MagicMock()
+    good_resp.text = VALID_DISCOVERY_JSON
+    client.models.generate_content.side_effect = [generic_resp, good_resp]
+    history = build_history([{"role": "user", "text": "I work in logistics"}])
+    result = run_discovery(client, history)
+    assert client.models.generate_content.call_count == 2
+    assert result["use_cases"][0]["label"] == "Write emails faster"
