@@ -131,3 +131,25 @@ def select_pill(selected_use_case: dict) -> int:
         if any(kw in text for kw in _PILL_KEYWORDS[pill_id]):
             return pill_id
     return 1
+
+
+def run_pick_confirm(
+    client: genai.Client,
+    conversation_history: list,
+    selected_use_case: dict,
+    role: str,
+    language: str,
+) -> str:
+    prompt = f"""Input: {selected_use_case['label']}, {role}, {language}
+
+The user just picked their use case. Write one warm, encouraging sentence that:
+- Confirms their choice
+- Tells them they're about to do this right now, not learn about it
+- Sounds like a smart friend, not a tutor
+
+Respond in {language}. One sentence only. No questions."""
+
+    contents = list(conversation_history) + [
+        types.Content(role="user", parts=[types.Part(text=prompt)])
+    ]
+    return _call(client, contents)

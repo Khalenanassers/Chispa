@@ -139,3 +139,13 @@ def test_select_pill_defaults_to_1():
     from chispa_core import select_pill
     uc = {"id": 3, "label": "Something unusual", "description": "An edge case not matching any keyword"}
     assert select_pill(uc) == 1
+
+
+def test_run_pick_confirm_returns_string():
+    from chispa_core import run_pick_confirm, build_history
+    client = _mock_client("Perfect — let's actually do this right now, together.")
+    history = build_history([{"role": "user", "text": "I work in logistics"}])
+    selected_use_case = {"id": 1, "label": "Write emails faster", "description": "Save time on updates"}
+    result = run_pick_confirm(client, history, selected_use_case, "office administrator", "en")
+    assert isinstance(result, str)
+    assert len(result) > 0
