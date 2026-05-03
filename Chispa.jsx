@@ -1,0 +1,969 @@
+import { useState, useEffect, useRef, useCallback } from 'react'
+
+const API_URL = window.CHISPA_API_URL || 'http://localhost:8000/api/chat'
+const ease = 'cubic-bezier(0.25, 1, 0.5, 1)'
+
+const STYLES = `
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@800&family=IBM+Plex+Mono&display=swap');
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #264653; --surface: #1e363f; --primary: #e76f51; --accent: #f4a261;
+  --highlight: #e9c46a; --text: #f1faee; --muted: #a8b8bc; --border: #3d5a66;
+  --user-msg: #c25240;
+}
+html, body { height: 100%; background: var(--bg); }
+@keyframes slideUp   { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:none} }
+@keyframes fadeIn    { from{opacity:0} to{opacity:1} }
+@keyframes fadeOut   { from{opacity:1} to{opacity:0} }
+@keyframes pillPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.02)} }
+@keyframes dotBeat   { 0%,100%{opacity:.3;transform:scale(.8)} 50%{opacity:1;transform:scale(1.2)} }
+@keyframes lineFade  { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:none} }
+`
+
+// ── atoms ────────────────────────────────────────────────────────────────────
+
+function Dots() {
+  return (
+    <div style={{ display: 'flex', gap: 5, padding: '6px 2px', alignItems: 'center' }}>
+      {[0, 1, 2].map(i => (
+        <span key={i} style={{
+          display: 'inline-block', width: 8, height: 8, borderRadius: '50%',
+          background: 'var(--primary)',
+          animation: 'dotBeat 1.4s ease-in-out infinite',
+          animationDelay: `${i * 0.2}s`,
+        }} />
+      ))}
+    </div>
+  )
+}
+
+function Typewriter({ text, speed = 25, onDone }) {
+  const [out, setOut] = useState('')
+  useEffect(() => {
+    setOut('')
+    if (!text) return
+    let i = 0
+    let timer
+    const tick = () => {
+      i++
+      setOut(text.slice(0, i))
+      if (i < text.length) timer = setTimeout(tick, speed)
+      else onDone?.()
+    }
+    timer = setTimeout(tick, speed)
+    return () => clearTimeout(timer)
+  }, [text]) // eslint-disable-line
+  return <>{out}</>
+}
+
+function Bubble({ msg, animate = false }) {
+  const user = msg.role === 'user'
+  return (
+    <div style={{
+      display: 'flex', justifyContent: user ? 'flex-end' : 'flex-start',
+      gap: 8, marginBottom: 12, alignItems: 'flex-end',
+      animation: `fadeIn 0.3s ${ease}`,
+    }}>
+      {!user && (
+        <div style={{
+          width: 10, height: 10, borderRadius: '50%', background: 'var(--primary)',
+          flexShrink: 0, marginBottom: 4,
+        }} />
+      )}
+      <div style={{
+        maxWidth: '78%', padding: '10px 14px',
+        borderRadius: user ? '18px 18px 4px 18px' : '4px 18px 18px 18px',
+        background: user ? 'var(--user-msg)' : 'var(--surface)',
+        color: 'var(--text)', fontSize: 15, lineHeight: 1.55,
+        border: user ? 'none' : '1px solid var(--border)',
+        wordBreak: 'break-word',
+      }}>
+        {animate && !user ? <Typewriter text={msg.text} speed={25} /> : msg.text}
+      </div>
+    </div>
+  )
+}
+
+function InputBar({ value, onChange, onSubmit, placeholder, disabled }) {
+  return (
+    <form
+      onSubmit={e => { e.preventDefault(); if (value.trim() && !disabled) onSubmit(value.trim()) }}
+      style={{
+        padding: '12px 24px 20px',
+        borderTop: '1px solid var(--border)',
+        display: 'flex', gap: 10, alignItems: 'center',
+        background: 'var(--bg)',
+        flexShrink: 0,
+      }}
+    >
+      <input
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder || 'Type your message…'}
+        disabled={disabled}
+        autoFocus
+        style={{
+          flex: 1, padding: '12px 16px', borderRadius: 24,
+          border: '1px solid var(--border)',
+          background: 'var(--surface)', color: 'var(--text)',
+          fontSize: 15, outline: 'none',
+          fontFamily: 'system-ui,-apple-system,sans-serif',
+          transition: 'border-color 0.2s',
+          minHeight: 48,
+        }}
+        onFocus={e => { e.target.style.borderColor = 'var(--primary)' }}
+        onBlur={e => { e.target.style.borderColor = 'var(--border)' }}
+      />
+      <button
+        type="submit"
+        disabled={!value.trim() || disabled}
+        style={{
+          width: 44, height: 44, borderRadius: '50%', border: 'none', flexShrink: 0,
+          background: value.trim() && !disabled ? 'var(--primary)' : 'var(--surface)',
+          color: value.trim() && !disabled ? '#fff' : 'var(--muted)',
+          fontSize: 18, cursor: value.trim() && !disabled ? 'pointer' : 'not-allowed',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          transition: 'background 0.2s',
+        }}
+        onMouseEnter={e => { if (value.trim() && !disabled) e.currentTarget.style.background = 'var(--accent)' }}
+        onMouseLeave={e => { if (value.trim() && !disabled) e.currentTarget.style.background = 'var(--primary)' }}
+      >→</button>
+    </form>
+  )
+}
+
+// ── output card with line-by-line fade ───────────────────────────────────────
+
+function OutputCard({ text }) {
+  const lines = text.split('\n').filter(l => l.trim())
+  return (
+    <div style={{
+      background: 'var(--surface)', borderRadius: 12,
+      border: '1px solid var(--border)',
+      padding: '20px 20px', margin: '0 0 8px',
+      fontFamily: "'IBM Plex Mono', monospace",
+      fontSize: 14, lineHeight: 1.7,
+      color: 'var(--text)', maxHeight: '55vh', overflowY: 'auto',
+    }}>
+      {lines.map((line, i) => (
+        <div key={i} style={{
+          animation: `lineFade 0.4s ${ease} both`,
+          animationDelay: `${i * 50}ms`,
+          marginBottom: i < lines.length - 1 ? 8 : 0,
+        }}>
+          {line}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ── Euforia overlay ──────────────────────────────────────────────────────────
+
+function Euforia({ msg, fadingOut }) {
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 1000,
+      background: 'var(--highlight)',
+      display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center',
+      padding: '40px 24px', textAlign: 'center',
+      animation: fadingOut
+        ? `fadeOut 0.4s ${ease} both`
+        : `fadeIn 0.2s ${ease} both`,
+    }}>
+      <div style={{
+        fontSize: 64, marginBottom: 12,
+        animation: `fadeIn 0.4s ${ease} 0.1s both`,
+      }}>✦</div>
+      <div style={{
+        fontFamily: "'Syne', sans-serif", fontWeight: 800,
+        fontSize: 36, color: '#1a2e35',
+        marginBottom: 20,
+        animation: `slideUp 0.4s ${ease} 0.2s both`,
+      }}>
+        There it is.
+      </div>
+      {msg && (
+        <p style={{
+          fontSize: 16, lineHeight: 1.6,
+          color: '#264653', maxWidth: 320,
+          animation: `fadeIn 0.4s ${ease} 0.4s both`,
+        }}>
+          {msg}
+        </p>
+      )}
+    </div>
+  )
+}
+
+// ── shell wrapper ────────────────────────────────────────────────────────────
+
+const shell = {
+  width: '100%', maxWidth: 480,
+  margin: '0 auto',
+  minHeight: '100dvh',
+  display: 'flex', flexDirection: 'column',
+  background: 'var(--bg)',
+  position: 'relative', overflow: 'hidden',
+}
+
+// ── main component ───────────────────────────────────────────────────────────
+
+export default function Chispa() {
+  const [screen, setScreen]           = useState('landing')
+  const [winPhase, setWinPhase]       = useState('input')
+  const [messages, setMessages]       = useState([])
+  const [winOffset, setWinOffset]     = useState(0)
+  const [useCases, setUseCases]       = useState([])
+  const [selectedUseCase, setSelected]= useState(null)
+  const [taskOutput, setTaskOutput]   = useState('')
+  const [pill, setPill]               = useState(null)
+  const [mapSteps, setMapSteps]       = useState([])
+  const [apiVars, setApiVars]         = useState({})
+  const [input, setInput]             = useState('')
+  const [loading, setLoading]         = useState(false)
+  const [lastAnimId, setLastAnimId]   = useState(null)
+  const [euforia, setEuforia]         = useState(false)
+  const [euforiaMsg, setEuforiaMsg]   = useState('')
+  const [euforiaOut, setEuforiaOut]   = useState(false)
+  const [fixMode, setFixMode]         = useState(false)
+  const [selectedCard, setSelectedCard] = useState(null)
+  const [copied, setCopied]             = useState(false)
+
+  const scrollRef   = useRef(null)
+  const messagesRef = useRef(messages)
+
+  // keep ref in sync so async setTimeout callbacks always see latest messages
+  useEffect(() => { messagesRef.current = messages }, [messages])
+
+  // inject styles once
+  useEffect(() => {
+    const el = document.createElement('style')
+    el.textContent = STYLES
+    document.head.appendChild(el)
+    return () => document.head.removeChild(el)
+  }, [])
+
+  // auto-scroll chat
+  useEffect(() => {
+    scrollRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages, loading])
+
+  // ── API helper ─────────────────────────────────────────────────────────────
+
+  const callAPI = useCallback(async (stage, history, vars, userMsg = '') => {
+    setLoading(true)
+
+    const body = JSON.stringify({
+      stage,
+      conversation_history: history.map(m => ({ role: m.role, text: m.text })),
+      variables: vars,
+      user_message: userMsg,
+    })
+
+    const doFetch = () => fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body,
+    }).then(r => r.json())
+
+    // 15s fallback timer
+    const fallbackTimer = setTimeout(() => {
+      setLoading(false)
+    }, 15000)
+
+    try {
+      let data
+      try {
+        data = await doFetch()
+      } catch {
+        await new Promise(r => setTimeout(r, 2000))
+        data = await doFetch()
+      }
+      clearTimeout(fallbackTimer)
+      setLoading(false)
+      const text = data?.reply ?? data?.response ?? ''
+      const updatedVars = data?.variables ?? vars
+      setApiVars(updatedVars)
+      return { text, vars: updatedVars, nextStage: data?.next_stage, needsInput: data?.needs_user_input }
+    } catch {
+      clearTimeout(fallbackTimer)
+      setLoading(false)
+      return null
+    }
+  }, [])
+
+  const mkMsg = (role, text) => ({ role, text, id: Date.now() + Math.random() })
+
+  // ── handlers ───────────────────────────────────────────────────────────────
+
+  const handleLandingSubmit = async (text) => {
+    const userMsg = mkMsg('user', text)
+    const history = [userMsg]
+    setMessages(history)
+    setScreen('discovery')
+
+    const result = await callAPI('discovery', history, {}, text)
+
+    if (!result) {
+      const errMsg = mkMsg('model', "Give me a second — I'm thinking.")
+      setMessages(h => [...h, errMsg])
+      setLastAnimId(errMsg.id)
+      return
+    }
+
+    // Use cases come back in variables (server) or as JSON in reply (fallback)
+    const vars = result.vars ?? {}
+    let ucs = vars.use_cases
+
+    if (!ucs?.length && result.text) {
+      try { ucs = JSON.parse(result.text)?.use_cases } catch {}
+    }
+
+    if (ucs?.length) {
+      setUseCases(ucs)
+      setApiVars(vars)
+      setTimeout(() => setScreen('pick'), 400)
+      return
+    }
+
+    // Multi-turn: show text reply, wait for more input
+    if (result.text) {
+      const aiMsg = mkMsg('model', result.text)
+      setMessages(h => [...h, aiMsg])
+      setLastAnimId(aiMsg.id)
+    }
+  }
+
+  const handleDiscoverySend = async (text) => {
+    setInput('')
+    const userMsg = mkMsg('user', text)
+    const newHistory = [...messages, userMsg]
+    setMessages(newHistory)
+
+    const result = await callAPI('discovery', newHistory, apiVars, text)
+
+    if (!result) {
+      const errMsg = mkMsg('model', "Give me a second — I'm thinking.")
+      setMessages(h => [...h, errMsg])
+      setLastAnimId(errMsg.id)
+      return
+    }
+
+    const vars = result.vars ?? {}
+    let ucs = vars.use_cases
+    if (!ucs?.length && result.text) {
+      try { ucs = JSON.parse(result.text)?.use_cases } catch {}
+    }
+
+    if (ucs?.length) {
+      setUseCases(ucs)
+      setApiVars(vars)
+      setTimeout(() => setScreen('pick'), 400)
+      return
+    }
+
+    if (result.text) {
+      const aiMsg = mkMsg('model', result.text)
+      setMessages(h => [...h, aiMsg])
+      setLastAnimId(aiMsg.id)
+    }
+  }
+
+  const handlePickCard = async (uc) => {
+    setSelectedCard(uc.id)
+
+    setTimeout(async () => {
+      setSelected(uc)
+      const snapshot = messagesRef.current          // stable reference
+      const newVars  = { ...apiVars, selected_use_case: uc }
+      setApiVars(newVars)
+
+      setWinOffset(snapshot.length)
+      setWinPhase('input')
+      setScreen('win')
+
+      // pick_confirm → warm confirmation, no user input needed
+      const confirmResult = await callAPI('pick_confirm', snapshot, newVars, '')
+      const confirmText   = confirmResult?.text ?? ''
+
+      // win_open → asks for task details
+      const winHistory  = confirmText
+        ? [...snapshot, mkMsg('model', confirmText)]
+        : snapshot
+      const openResult  = await callAPI('win_open', winHistory, { ...newVars, ...confirmResult?.vars }, '')
+      const questionText = openResult?.text ?? ''
+
+      const newMsgs = []
+      if (confirmText)  newMsgs.push(mkMsg('model', confirmText))
+      if (questionText) newMsgs.push(mkMsg('model', questionText))
+
+      const latestId = newMsgs.length ? newMsgs[newMsgs.length - 1].id : null
+      setMessages(prev => [...prev, ...newMsgs])
+      if (latestId) setLastAnimId(latestId)
+    }, 800)
+  }
+
+  const handleWinSend = async (text) => {
+    setInput('')
+    setFixMode(false)
+
+    const userMsg = mkMsg('user', text)
+    const newHistory = [...messages, userMsg]
+    setMessages(newHistory)
+
+    const vars = { ...apiVars, user_task_details: text }
+    const result = await callAPI('win_execute', newHistory, vars, text)
+
+    if (!result) {
+      const errMsg = mkMsg('model', "Give me a second — I'm thinking.")
+      setMessages(h => [...h, errMsg])
+      setLastAnimId(errMsg.id)
+      return
+    }
+
+    const resp = result.text
+    // Output detection: long text (>100 chars) that doesn't end with "?"
+    const trimmed = resp.trim()
+    if (trimmed.length > 100 && !trimmed.endsWith('?')) {
+      setTaskOutput(resp)
+      setWinPhase('output')
+      setApiVars({ ...vars, ...result.vars, task_output: resp })
+    } else {
+      const aiMsg = mkMsg('model', resp)
+      setMessages(h => [...h, aiMsg])
+      setLastAnimId(aiMsg.id)
+    }
+  }
+
+  const handleWinConfirm = async () => {
+    // Trigger euforia
+    setEuforia(true)
+    setEuforiaMsg('')
+
+    const result = await callAPI('win_confirm', messages, apiVars, '')
+    if (result?.text) setEuforiaMsg(result.text)
+
+    // Auto-transition after 2.5s
+    setTimeout(() => {
+      setEuforiaOut(true)
+      setTimeout(async () => {
+        setEuforia(false)
+        setEuforiaOut(false)
+
+        // Call pill stage
+        const pillResult = await callAPI('pill', messages, { ...apiVars, ...result?.vars }, '')
+        if (pillResult?.text) {
+          setPill(parsePill(pillResult.text))
+          setApiVars(v => ({ ...v, ...pillResult.vars }))
+        }
+        setScreen('pill')
+      }, 400)
+    }, 2500)
+  }
+
+  const handleWinFix = async (text) => {
+    setInput('')
+    setFixMode(false)
+    setWinPhase('input')
+
+    const fixMsg = mkMsg('user', text)
+    const newHistory = [...messages, fixMsg]
+    setMessages(newHistory)
+    setTaskOutput('')
+
+    const vars = { ...apiVars, user_task_details: text }
+    const result = await callAPI('win_execute', newHistory, vars, text)
+
+    if (!result) {
+      const errMsg = mkMsg('model', "Give me a second — I'm thinking.")
+      setMessages(h => [...h, errMsg])
+      setLastAnimId(errMsg.id)
+      return
+    }
+
+    const trimmed = result.text.trim()
+    if (trimmed.length > 100 && !trimmed.endsWith('?')) {
+      setTaskOutput(result.text)
+      setWinPhase('output')
+      setApiVars({ ...vars, ...result.vars, task_output: result.text })
+    } else {
+      const aiMsg = mkMsg('model', result.text)
+      setMessages(h => [...h, aiMsg])
+      setLastAnimId(aiMsg.id)
+    }
+  }
+
+  const handlePillNext = async () => {
+    const result = await callAPI('map', messages, apiVars, '')
+    if (result?.text) {
+      setMapSteps(parseMap(result.text))
+    }
+    setScreen('map')
+  }
+
+  const handleSaveMap = () => {
+    const text = mapSteps.map((s, i) => `0${i + 1}. ${s}`).join('\n')
+    navigator.clipboard?.writeText(text).catch(() => {})
+    // Visual feedback handled inline
+  }
+
+  const handleReset = () => {
+    setScreen('landing')
+    setWinPhase('input')
+    setMessages([])
+    setWinOffset(0)
+    setUseCases([])
+    setSelected(null)
+    setTaskOutput('')
+    setPill(null)
+    setMapSteps([])
+    setApiVars({})
+    setInput('')
+    setLoading(false)
+    setLastAnimId(null)
+    setEuforia(false)
+    setEuforiaMsg('')
+    setEuforiaOut(false)
+    setFixMode(false)
+    setSelectedCard(null)
+  }
+
+  // ── parsers ────────────────────────────────────────────────────────────────
+
+  function parsePill(text) {
+    const lines = text.split('\n').map(l => l.trim()).filter(Boolean)
+    if (lines.length >= 3) {
+      const question = [...lines].reverse().find(l => l.endsWith('?')) ?? lines[lines.length - 1]
+      const concept = lines[0]
+      const analogy = lines.slice(1).find(l => l !== question) ?? lines[1]
+      return { concept, analogy, question }
+    }
+    if (lines.length === 2) return { concept: lines[0], analogy: '', question: lines[1] }
+    return { concept: text, analogy: '', question: '' }
+  }
+
+  function parseMap(text) {
+    return text
+      .split('\n')
+      .map(l => l.trim().replace(/^[0-9]+[.)]\s*/, '').trim())
+      .filter(l => l.length > 20)
+      .slice(0, 3)
+  }
+
+  // ── screens ────────────────────────────────────────────────────────────────
+
+  const renderLanding = () => (
+    <div style={{
+      flex: 1, display: 'flex', flexDirection: 'column',
+      justifyContent: 'center', padding: '48px 24px',
+      animation: `fadeIn 0.4s ${ease}`,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 52 }}>
+        <span style={{ fontSize: 26, color: 'var(--primary)' }}>✦</span>
+        <span style={{ fontFamily: "'Syne',sans-serif", fontWeight: 800, fontSize: 26, color: 'var(--primary)' }}>
+          Chispa
+        </span>
+      </div>
+
+      <h1 style={{
+        fontFamily: "'Syne',sans-serif", fontWeight: 800,
+        fontSize: 'clamp(30px, 8vw, 40px)', color: 'var(--text)',
+        lineHeight: 1.15, marginBottom: 20,
+      }}>
+        Your first win with AI.<br />20 minutes.
+      </h1>
+
+      <p style={{ color: 'var(--muted)', fontSize: 16, lineHeight: 1.65, marginBottom: 44, maxWidth: 360 }}>
+        Tell me what you do. I'll show you something useful — right now. No account. No jargon. No pressure.
+      </p>
+
+      <form onSubmit={e => { e.preventDefault(); if (input.trim()) handleLandingSubmit(input.trim()); setInput('') }}>
+        <input
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          placeholder="I work as a…"
+          autoFocus
+          style={{
+            width: '100%', padding: '15px 18px', borderRadius: 12,
+            border: '1px solid var(--border)',
+            background: 'var(--surface)', color: 'var(--text)',
+            fontSize: 16, outline: 'none', marginBottom: 12,
+            fontFamily: 'system-ui,-apple-system,sans-serif',
+            minHeight: 52, transition: 'border-color 0.2s',
+          }}
+          onFocus={e => { e.target.style.borderColor = 'var(--primary)' }}
+          onBlur={e => { e.target.style.borderColor = 'var(--border)' }}
+        />
+        <button
+          type="submit"
+          disabled={!input.trim()}
+          style={{
+            width: '100%', padding: '15px', borderRadius: 12, border: 'none',
+            background: input.trim() ? 'var(--primary)' : 'var(--surface)',
+            color: input.trim() ? '#fff' : 'var(--muted)',
+            fontFamily: "'Syne',sans-serif", fontWeight: 800,
+            fontSize: 17, cursor: input.trim() ? 'pointer' : 'not-allowed',
+            transition: 'background 0.2s, color 0.2s', minHeight: 52,
+          }}
+          onMouseEnter={e => { if (input.trim()) e.currentTarget.style.background = 'var(--accent)' }}
+          onMouseLeave={e => { if (input.trim()) e.currentTarget.style.background = 'var(--primary)' }}
+        >
+          Let's go →
+        </button>
+      </form>
+    </div>
+  )
+
+  const renderDiscovery = () => (
+    <>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '24px 24px 8px' }}>
+        {messages.slice(-6).map(m => (
+          <Bubble key={m.id} msg={m} animate={m.id === lastAnimId} />
+        ))}
+        {loading && (
+          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginBottom: 12 }}>
+            <div style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--primary)', flexShrink: 0, marginBottom: 4 }} />
+            <div style={{ padding: '8px 14px', background: 'var(--surface)', borderRadius: '4px 18px 18px 18px', border: '1px solid var(--border)' }}>
+              <Dots />
+            </div>
+          </div>
+        )}
+        <div ref={scrollRef} />
+      </div>
+      <InputBar
+        value={input}
+        onChange={setInput}
+        onSubmit={handleDiscoverySend}
+        disabled={loading}
+      />
+    </>
+  )
+
+  const renderPick = () => (
+    <div style={{ flex: 1, overflowY: 'auto', padding: '40px 24px 32px' }}>
+      <p style={{
+        fontSize: 11, fontWeight: 600, letterSpacing: '0.1em',
+        textTransform: 'uppercase', color: 'var(--muted)',
+        marginBottom: 28,
+      }}>
+        Here's what we can do right now:
+      </p>
+
+      {useCases.map((uc, i) => {
+        const isSelected = selectedCard === uc.id
+        const isDimmed = selectedCard !== null && !isSelected
+        return (
+          <div
+            key={uc.id}
+            onClick={() => !selectedCard && handlePickCard(uc)}
+            style={{
+              padding: '20px 20px',
+              borderRadius: 12,
+              border: `1px solid ${isSelected ? 'var(--primary)' : 'var(--border)'}`,
+              background: 'var(--surface)',
+              marginBottom: 14,
+              cursor: selectedCard ? 'default' : 'pointer',
+              opacity: isDimmed ? 0.4 : 1,
+              transform: isSelected ? 'scale(1.01)' : 'scale(1)',
+              transition: `opacity 0.3s ${ease}, border-color 0.2s, transform 0.2s ${ease}`,
+              animation: `slideUp 0.4s ${ease} both`,
+              animationDelay: `${i * 150}ms`,
+              position: 'relative',
+            }}
+            onMouseEnter={e => { if (!selectedCard) { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.transform = 'scale(1.01)' } }}
+            onMouseLeave={e => { if (!selectedCard && !isSelected) { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.transform = 'scale(1)' } }}
+          >
+            {isSelected && (
+              <span style={{
+                position: 'absolute', top: 14, right: 16,
+                color: 'var(--primary)', fontSize: 18, fontWeight: 700,
+              }}>✓</span>
+            )}
+            <div style={{
+              fontFamily: "'Syne',sans-serif", fontWeight: 800,
+              fontSize: 19, color: 'var(--primary)', marginBottom: 8,
+            }}>
+              {uc.label}
+            </div>
+            <div style={{ fontSize: 14, color: 'var(--muted)', lineHeight: 1.55 }}>
+              {uc.description}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+
+  const winMessages = messages.slice(winOffset).slice(-6)
+
+  const renderWin = () => (
+    <>
+      {/* Use case pill header */}
+      <div style={{
+        padding: '20px 24px 0',
+        flexShrink: 0,
+      }}>
+        {selectedUseCase && (
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '6px 14px', borderRadius: 20,
+            background: 'var(--surface)', border: '1px solid var(--border)',
+            fontSize: 13, color: 'var(--primary)',
+            fontFamily: "'Syne',sans-serif", fontWeight: 800,
+          }}>
+            ✦ {selectedUseCase.label}
+          </span>
+        )}
+      </div>
+
+      {winPhase === 'input' && (
+        <>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px 8px' }}>
+            {winMessages.map(m => (
+              <Bubble key={m.id} msg={m} animate={m.id === lastAnimId} />
+            ))}
+            {loading && (
+              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginBottom: 12 }}>
+                <div style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--primary)', flexShrink: 0, marginBottom: 4 }} />
+                <div style={{ padding: '8px 14px', background: 'var(--surface)', borderRadius: '4px 18px 18px 18px', border: '1px solid var(--border)' }}>
+                  <Dots />
+                </div>
+              </div>
+            )}
+            <div ref={scrollRef} />
+          </div>
+          <InputBar
+            value={input}
+            onChange={setInput}
+            onSubmit={handleWinSend}
+            disabled={loading}
+          />
+        </>
+      )}
+
+      {winPhase === 'output' && (
+        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px 32px' }}>
+          <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 12 }}>Here it is:</p>
+
+          <OutputCard text={taskOutput} />
+
+          {!fixMode ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 4 }}>
+              <button
+                onClick={handleWinConfirm}
+                style={{
+                  width: '100%', padding: '15px', borderRadius: 12, border: 'none',
+                  background: 'var(--primary)', color: '#fff',
+                  fontFamily: "'Syne',sans-serif", fontWeight: 800,
+                  fontSize: 16, cursor: 'pointer', minHeight: 52,
+                  transition: 'background 0.2s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'var(--accent)' }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'var(--primary)' }}
+              >
+                ✓ This is great
+              </button>
+              <button
+                onClick={() => setFixMode(true)}
+                style={{
+                  width: '100%', padding: '14px', borderRadius: 12,
+                  border: '1px solid var(--border)', background: 'transparent',
+                  color: 'var(--muted)', fontSize: 15, cursor: 'pointer', minHeight: 52,
+                  transition: 'border-color 0.2s, color 0.2s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.color = 'var(--text)' }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--muted)' }}
+              >
+                ✗ Fix something
+              </button>
+            </div>
+          ) : (
+            <div style={{ marginTop: 8 }}>
+              <InputBar
+                value={input}
+                onChange={setInput}
+                onSubmit={handleWinFix}
+                placeholder="What should I change?"
+                disabled={loading}
+              />
+            </div>
+          )}
+        </div>
+      )}
+    </>
+  )
+
+  const renderPill = () => (
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '40px 24px 48px', overflowY: 'auto' }}>
+      {loading && !pill ? (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><Dots /></div>
+      ) : pill ? (
+        <div style={{
+          background: 'var(--surface)', borderRadius: 16,
+          border: '1px solid var(--border)',
+          padding: '32px 24px',
+          animation: `pillPulse 0.6s ${ease}`,
+        }}>
+          <span style={{
+            display: 'inline-block', fontSize: 13, fontWeight: 600,
+            color: 'var(--highlight)', letterSpacing: '0.06em',
+            marginBottom: 28,
+          }}>
+            💡 What just happened:
+          </span>
+
+          <p style={{
+            fontFamily: "'Syne',sans-serif", fontWeight: 800,
+            fontSize: 22, color: 'var(--primary)',
+            lineHeight: 1.3, marginBottom: 24,
+          }}>
+            {pill.concept}
+          </p>
+
+          {pill.analogy && (
+            <p style={{
+              fontSize: 16, color: 'var(--text)', lineHeight: 1.65,
+              fontStyle: 'italic', marginBottom: 24,
+            }}>
+              {pill.analogy}
+            </p>
+          )}
+
+          {pill.question && (
+            <p style={{ fontSize: 14, color: 'var(--muted)', lineHeight: 1.6 }}>
+              {pill.question}
+            </p>
+          )}
+        </div>
+      ) : null}
+
+      {pill && (
+        <button
+          onClick={handlePillNext}
+          disabled={loading}
+          style={{
+            width: '100%', padding: '15px', borderRadius: 12, border: 'none',
+            background: loading ? 'var(--surface)' : 'var(--primary)',
+            color: loading ? 'var(--muted)' : '#fff',
+            fontFamily: "'Syne',sans-serif", fontWeight: 800,
+            fontSize: 16, cursor: loading ? 'not-allowed' : 'pointer',
+            marginTop: 24, minHeight: 52,
+            transition: 'background 0.2s',
+          }}
+          onMouseEnter={e => { if (!loading) e.currentTarget.style.background = 'var(--accent)' }}
+          onMouseLeave={e => { if (!loading) e.currentTarget.style.background = 'var(--primary)' }}
+        >
+          {loading ? '…' : 'What\'s next for me →'}
+        </button>
+      )}
+    </div>
+  )
+
+  const handleSaveAndCopy = () => {
+    handleSaveMap()
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  const renderMap = () => (
+      <div style={{ flex: 1, overflowY: 'auto', padding: '40px 24px 48px' }}>
+        {loading && !mapSteps.length ? (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><Dots /></div>
+        ) : (
+          <>
+            <h2 style={{
+              fontFamily: "'Syne',sans-serif", fontWeight: 800,
+              fontSize: 28, color: 'var(--text)', marginBottom: 8,
+            }}>
+              Your next 3 steps
+            </h2>
+            <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 36 }}>
+              This week. Your job. No jargon.
+            </p>
+
+            {mapSteps.map((step, i) => (
+              <div
+                key={i}
+                style={{
+                  display: 'flex', gap: 18, alignItems: 'flex-start',
+                  marginBottom: 24, padding: '20px',
+                  background: 'var(--surface)', borderRadius: 12,
+                  border: '1px solid var(--border)',
+                  animation: `slideUp 0.4s ${ease} both`,
+                  animationDelay: `${i * 100}ms`,
+                }}
+              >
+                <span style={{
+                  fontFamily: "'Syne',sans-serif", fontWeight: 800,
+                  fontSize: 32, color: 'var(--primary)', lineHeight: 1, flexShrink: 0,
+                  minWidth: 44,
+                }}>
+                  0{i + 1}
+                </span>
+                <p style={{ fontSize: 15, color: 'var(--text)', lineHeight: 1.6, paddingTop: 4 }}>
+                  {step}
+                </p>
+              </div>
+            ))}
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 8 }}>
+              <button
+                onClick={handleSaveAndCopy}
+                style={{
+                  width: '100%', padding: '15px', borderRadius: 12, border: 'none',
+                  background: 'var(--primary)', color: '#fff',
+                  fontFamily: "'Syne',sans-serif", fontWeight: 800,
+                  fontSize: 16, cursor: 'pointer', minHeight: 52,
+                  transition: 'background 0.2s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'var(--accent)' }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'var(--primary)' }}
+              >
+                {copied ? '✓ Copied to clipboard' : 'Save my map'}
+              </button>
+
+              <button
+                onClick={handleReset}
+                style={{
+                  width: '100%', padding: '14px', borderRadius: 12,
+                  border: '1px solid var(--border)', background: 'transparent',
+                  color: 'var(--muted)', fontSize: 15, cursor: 'pointer', minHeight: 52,
+                  transition: 'border-color 0.2s, color 0.2s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.color = 'var(--text)' }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--muted)' }}
+              >
+                Start over
+              </button>
+            </div>
+
+            <p style={{
+              textAlign: 'center', fontSize: 14,
+              color: 'var(--muted)', fontStyle: 'italic',
+              marginTop: 40, lineHeight: 1.5,
+            }}>
+              "One spark. That's how it starts."<br />
+              <span style={{ fontSize: 12 }}>— Chispa</span>
+            </p>
+          </>
+        )}
+      </div>
+  )
+
+  // ── render ─────────────────────────────────────────────────────────────────
+
+  return (
+    <div style={shell}>
+      {euforia && <Euforia msg={euforiaMsg} fadingOut={euforiaOut} />}
+
+      {screen === 'landing'    && renderLanding()}
+      {screen === 'discovery'  && renderDiscovery()}
+      {screen === 'pick'       && renderPick()}
+      {screen === 'win'        && renderWin()}
+      {screen === 'pill'       && renderPill()}
+      {screen === 'map'        && renderMap()}
+    </div>
+  )
+}

@@ -12,11 +12,64 @@ At the start of every session, invoke these skills in order:
 |---|---|
 | `caveman` | Always — sets compressed communication mode |
 | `superpowers:brainstorming` | Before any feature, screen, or UI work |
-| `ui-ux-pro-max` | When designing or building any screen |
-| `frontend-design` | When building React/HTML components |
+| `impeccable` | When designing or building any screen or UI component |
 | `superpowers:writing-plans` | Before any multi-step implementation |
 | `superpowers:systematic-debugging` | On any bug or unexpected behavior |
 | `simplify` | After completing a major implementation step |
+
+---
+
+## Dev Commands
+
+```bash
+# Setup (Windows — activate venv first)
+.venv\Scripts\activate
+pip install -r requirements.txt
+
+# Run backend (requires GOOGLE_API_KEY in .env)
+uvicorn server:app --reload
+
+# Run all tests (no API key needed — all mocked)
+pytest
+
+# Run a single test
+pytest tests/test_core.py::test_run_discovery_returns_parsed_dict -v
+
+# Run server tests only
+pytest tests/test_server.py -v
+```
+
+---
+
+## Code Architecture
+
+Three files carry all application logic:
+
+**`chispa_core.py`** — pure stage functions, no HTTP. Each stage is one exported `run_*` function (`run_discovery`, `run_pick_confirm`, `run_win_open`, `run_win_execute`, `run_win_confirm`, `run_pill`, `run_map`). Also exports `select_pill` (rule-based, no AI) and `build_history`/`build_client` helpers. All AI calls go through the internal `_call()` helper which retries once on empty response. `run_win_execute` makes an extra low-temperature self-critique call via `_quality_check()` and silently regenerates on failure.
+
+**`server.py`** — stateless FastAPI. Endpoints: `GET /health` (model name check), `POST /api/chat` (main). The `stage` string routes to the matching `run_*` function. **The frontend owns all state** — it sends `variables` (a dict) on every request and receives it back updated. `selected_use_case` is set by the frontend (user taps a card), not by any AI call. `build_history()` converts `list[dict]` wire format into `list[types.Content]` on every request.
+
+**`Chispa.jsx`** — single-file React component. All 6 screens, design tokens, animations, and API calls in one file. Talks to `POST /api/chat`. Manages all conversation state client-side.
+
+Stage routing in `server.py` (linear, no branching):
+```
+discovery → pick_confirm → win_open → win_execute → win_confirm → pill → map → done
+```
+
+`needs_user_input: false` stages auto-advance on the frontend without waiting for user input.
+
+```python
+response = client.models.generate_content(
+    model="gemma-4-26b-a4b-it",
+    config={
+        "system_instruction": SYSTEM_PROMPT,
+        "temperature": 0.7,
+        "max_output_tokens": 1024,
+        "response_mime_type": "application/json"  # Stage 1 (discovery) ONLY
+    },
+    contents=conversation_history
+)
+```
 
 ---
 
@@ -45,8 +98,8 @@ The product is built around a single emotional peak: *euforia* — the moment Ro
 
 | Layer | Technology |
 |---|---|
-| Model | Gemma 4 26B MoE via Google AI Studio API (`gemma-4-26b-it`) |
-| Backend | Python — FastAPI or Flask |
+| Model | Gemma 4 26B MoE via Google AI Studio API (`gemma-4-26b-a4b-it`) |
+| Backend | Python — FastAPI (`server.py`) |
 | Frontend | React JSX single-file component, or plain HTML/JS |
 | Hosting | Kaggle Notebook or Hugging Face Spaces (free tier) |
 | Local dev | Ollama (`ollama run gemma4:e4b`) |
@@ -79,20 +132,7 @@ Pass the **full conversation history** on every API call.
 
 ---
 
-## API Call Structure
-
-```python
-response = client.models.generate_content(
-    model="gemma-4-26b-it",
-    config={
-        "system_instruction": SYSTEM_PROMPT,
-        "temperature": 0.7,
-        "max_output_tokens": 1024,
-        "response_mime_type": "application/json"  # Stage 1 ONLY
-    },
-    contents=conversation_history
-)
-```
+## API Reference
 
 Stage 1 uses `response_mime_type: application/json` for reliable structured output. All other stages use plain text.
 

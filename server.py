@@ -2,6 +2,7 @@ import os
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import Any
 
@@ -44,6 +45,11 @@ VALID_STAGES = {
     "discovery", "pick_confirm", "win_open",
     "win_execute", "win_confirm", "pill", "map",
 }
+
+
+@app.get("/")
+def serve_root():
+    return FileResponse("index.html")
 
 
 @app.get("/health")
