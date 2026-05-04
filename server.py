@@ -48,8 +48,9 @@ VALID_STAGES = {
 
 
 @app.get("/")
-def serve_root():
-    return FileResponse("index.html")
+async def serve_frontend():
+    html_path = os.path.join(os.path.dirname(__file__), "index.html")
+    return FileResponse(html_path)
 
 
 @app.get("/health")
