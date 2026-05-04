@@ -22,7 +22,10 @@
       "Bash(where node *)",
       "PowerShell(node \"C:\\\\Users\\\\Khale\\\\.claude\\\\plugins\\\\cache\\\\impeccable\\\\impeccable\\\\3.0.6\\\\skills\\\\impeccable\\\\scripts\\\\load-context.mjs\")",
       "Bash(python3 *)",
-      "PowerShell($t = Get-Content Chispa.jsx -Raw; $o = \\($t.ToCharArray\\(\\) | Where-Object {$_ -eq '{'}\\).Count; $c = \\($t.ToCharArray\\(\\) | Where-Object {$_ -eq '}'}\\).Count; \"Braces: $o open $c close diff=$\\($o-$c\\)\"; $p = \\($t.ToCharArray\\(\\) | Where-Object {$_ -eq '\\('}\\).Count; $r = \\($t.ToCharArray\\(\\) | Where-Object {$_ -eq '\\)'}\\).Count; \"Parens: $p open $r close diff=$\\($p-$r\\)\")"
+      "PowerShell($t = Get-Content Chispa.jsx -Raw; $o = \\($t.ToCharArray\\(\\) | Where-Object {$_ -eq '{'}\\).Count; $c = \\($t.ToCharArray\\(\\) | Where-Object {$_ -eq '}'}\\).Count; \"Braces: $o open $c close diff=$\\($o-$c\\)\"; $p = \\($t.ToCharArray\\(\\) | Where-Object {$_ -eq '\\('}\\).Count; $r = \\($t.ToCharArray\\(\\) | Where-Object {$_ -eq '\\)'}\\).Count; \"Parens: $p open $r close diff=$\\($p-$r\\)\")",
+      "Bash(git remote *)",
+      "Bash(git branch *)",
+      "Bash(git push *)"
     ]
   }
 }

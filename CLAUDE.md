@@ -52,24 +52,16 @@ Three files carry all application logic:
 **`Chispa.jsx`** — single-file React component. All 6 screens, design tokens, animations, and API calls in one file. Talks to `POST /api/chat`. Manages all conversation state client-side.
 
 Stage routing in `server.py` (linear, no branching):
-```
-discovery → pick_confirm → win_open → win_execute → win_confirm → pill → map → done
-```
 
-`needs_user_input: false` stages auto-advance on the frontend without waiting for user input.
-
-```python
-response = client.models.generate_content(
-    model="gemma-4-26b-a4b-it",
-    config={
-        "system_instruction": SYSTEM_PROMPT,
-        "temperature": 0.7,
-        "max_output_tokens": 1024,
-        "response_mime_type": "application/json"  # Stage 1 (discovery) ONLY
-    },
-    contents=conversation_history
-)
-```
+| Stage | `next_stage` | `needs_user_input` |
+|---|---|---|
+| `discovery` | `pick_confirm` | false — auto-advances |
+| `pick_confirm` | `win_open` | false — auto-advances |
+| `win_open` | `win_execute` | true — waits for task details |
+| `win_execute` | `win_confirm` | true — waits for "looks good" |
+| `win_confirm` | `pill` | false — auto-advances |
+| `pill` | `map` | true — waits for user response |
+| `map` | `done` | false — session ends |
 
 ---
 
@@ -124,7 +116,7 @@ STAGE 5 — THE MAP         (3 personalized next steps, auto-fires after pill)
 ```
 user_input → role → language → use_cases[3]
            → selected_use_case → user_task_details
-           → task_output → task_output_summary
+           → task_output → task_output_summary  (first 2 sentences of task_output)
            → pill_id → pill_concept_name → map[3]
 ```
 
@@ -152,14 +144,14 @@ Stage 1 uses `response_mime_type: application/json` for reliable structured outp
 
 ### Pill selection logic (rule-based, no AI call)
 
-| Use case involves | Pill |
-|---|---|
-| Writing, drafting, composing | Pill 1 — Prompting |
-| Summarizing, organizing, structuring | Pill 2 — AI strengths |
-| Sharing info with AI (emails, docs, data) | Pill 3 — Context |
-| Any output the user will act on | Pill 4 — Hallucination |
+`select_pill()` scans `selected_use_case.label + description` for keywords. Priority order: **2 → 3 → 4 → 1**. Pill 1 is the fallback when no keywords match.
 
-Default: always fire Pill 1 on first session.
+| Pill | Keywords matched |
+|---|---|
+| Pill 2 — AI strengths | summarize, summary, organize, structure, notes, recap |
+| Pill 3 — Context | share, upload, data, spreadsheet, document, analyze |
+| Pill 4 — Hallucination | decide, approve, review, act, action |
+| Pill 1 — Prompting | write, draft, compose, email, letter, message, report (or fallback) |
 
 ---
 
