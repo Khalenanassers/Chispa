@@ -237,6 +237,9 @@ export default function Chispa() {
   // keep ref in sync so async setTimeout callbacks always see latest messages
   useEffect(() => { messagesRef.current = messages }, [messages])
 
+  // log active API endpoint on mount so ngrok URL is visible in console
+  useEffect(() => { console.log('[Chispa] API_URL:', API_URL) }, [])
+
   // inject styles once
   useEffect(() => {
     const el = document.createElement('style')
@@ -277,7 +280,8 @@ export default function Chispa() {
       let data
       try {
         data = await doFetch()
-      } catch {
+      } catch (err) {
+        console.warn('[Chispa] fetch attempt 1 failed, retrying:', err)
         await new Promise(r => setTimeout(r, 2000))
         data = await doFetch()
       }
@@ -287,9 +291,12 @@ export default function Chispa() {
       const updatedVars = data?.variables ?? vars
       setApiVars(updatedVars)
       return { text, vars: updatedVars, nextStage: data?.next_stage, needsInput: data?.needs_user_input }
-    } catch {
+    } catch (err) {
       clearTimeout(fallbackTimer)
       setLoading(false)
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error('[Chispa] API call failed:', msg, err)
+      setMessages(h => [...h, { role: 'model', text: `⚠ ${msg}`, id: Date.now() }])
       return null
     }
   }, [])

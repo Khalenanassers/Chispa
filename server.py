@@ -108,4 +108,10 @@ def chat(req: ChatRequest):
             return ChatResponse(reply=reply, variables=v, next_stage="done", needs_user_input=False)
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"[Chispa] API error (stage={req.stage}): {e}", flush=True)
+        return ChatResponse(
+            reply="Give me a second — I'm thinking.",
+            variables=v,
+            next_stage=req.stage,
+            needs_user_input=True,
+        )
