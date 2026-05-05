@@ -216,7 +216,67 @@
         </div>
       )
     }
-    
+
+    // ── Chispa character SVG ─────────────────────────────────────────────────
+
+    function ChispaSVG({ size = 140, animated = false }) {
+      const uid = (React.useId ? React.useId() : 'c').replace(/[^a-z0-9]/gi, '')
+      const gid = `fg${uid}`
+      const h = Math.round(size * 160 / 140)
+      const eyeAnim = animated ? 'eyeBlink 4s ease-in-out infinite' : 'none'
+      return (
+        <svg viewBox="0 0 140 160" width={size} height={h} style={{ display: 'block', overflow: 'visible' }}>
+          <defs>
+            <radialGradient id={gid} cx="50%" cy="40%" r="60%" fx="50%" fy="25%">
+              <stop offset="0%"   stopColor="#FDE68A" />
+              <stop offset="28%"  stopColor="#FAC75A" />
+              <stop offset="62%"  stopColor="#EF9F27" />
+              <stop offset="100%" stopColor="#e76f51" />
+            </radialGradient>
+          </defs>
+
+          {/* Flame — center tip (70,8), left tip (22,50), right tip (118,50) */}
+          <path
+            d="M70,8 C58,22 20,36 20,50 C20,63 36,74 54,81 C59,84 63,87 70,89 C77,87 81,84 86,81 C104,74 120,63 120,50 C120,36 82,22 70,8 Z"
+            fill={`url(#${gid})`}
+            stroke="#7A2E1A"
+            strokeWidth="3"
+            strokeLinejoin="round"
+          />
+
+          {/* Base circle */}
+          <circle cx="70" cy="108" r="44" fill="#FAC75A" stroke="#7A2E1A" strokeWidth="3" />
+
+          {/* Cheeks */}
+          <ellipse cx="42" cy="112" rx="10" ry="7" fill="#F4A261" opacity="0.5" />
+          <ellipse cx="98" cy="112" rx="10" ry="7" fill="#F4A261" opacity="0.5" />
+
+          {/* Left eye */}
+          <g style={{ transformOrigin: '53px 101px', animation: eyeAnim }}>
+            <circle cx="53" cy="101" r="11" fill="white" stroke="#7A2E1A" strokeWidth="2.5" />
+            <circle cx="53" cy="101" r="7"  fill="#3D1A0A" />
+            <circle cx="53" cy="101" r="3.5" fill="#1a0805" />
+            <circle cx="49" cy="97"  r="2"  fill="white" />
+          </g>
+
+          {/* Right eye */}
+          <g style={{ transformOrigin: '87px 101px', animation: eyeAnim }}>
+            <circle cx="87" cy="101" r="11" fill="white" stroke="#7A2E1A" strokeWidth="2.5" />
+            <circle cx="87" cy="101" r="7"  fill="#3D1A0A" />
+            <circle cx="87" cy="101" r="3.5" fill="#1a0805" />
+            <circle cx="83" cy="97"  r="2"  fill="white" />
+          </g>
+
+          {/* Eyebrows */}
+          <path d="M41,87 C46,82 52,82 58,85" fill="none" stroke="#7A2E1A" strokeWidth="2.5" strokeLinecap="round" />
+          <path d="M82,85 C88,82 94,82 99,87" fill="none" stroke="#7A2E1A" strokeWidth="2.5" strokeLinecap="round" />
+
+          {/* Mouth — slight open smile */}
+          <path d="M57,114 C62,124 78,124 83,114" fill="#5a2010" opacity="0.7" stroke="#7A2E1A" strokeWidth="2.5" strokeLinecap="round" />
+        </svg>
+      )
+    }
+
     // ── shell wrapper ────────────────────────────────────────────────────────────
     
     const shell = {
