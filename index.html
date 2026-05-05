@@ -827,13 +827,13 @@
                   cursor: selectedCard ? 'default' : 'pointer',
                   opacity: isDimmed ? 0.4 : 1,
                   transform: isSelected ? 'scale(1.01)' : 'scale(1)',
-                  transition: `opacity 0.3s ${ease}, border-color 0.2s, transform 0.2s ${ease}`,
+                  transition: `opacity 0.3s ${ease}, border-color 0.2s, transform 0.2s ${ease}, box-shadow 0.2s ${ease}`,
                   animation: `slideUp 0.4s ${ease} both`,
                   animationDelay: `${i * 150}ms`,
                   position: 'relative',
                 }}
-                onMouseEnter={e => { if (!selectedCard) { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.transform = 'scale(1.01)' } }}
-                onMouseLeave={e => { if (!selectedCard && !isSelected) { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.transform = 'scale(1)' } }}
+                onMouseEnter={e => { if (!selectedCard) { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.3)' } }}
+                onMouseLeave={e => { if (!selectedCard && !isSelected) { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none' } }}
               >
                 {isSelected && (
                   <span style={{
