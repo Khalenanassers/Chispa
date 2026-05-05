@@ -33,6 +33,11 @@
     @keyframes pillPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.02)} }
     @keyframes dotBeat   { 0%,100%{opacity:.3;transform:scale(.8)} 50%{opacity:1;transform:scale(1.2)} }
     @keyframes lineFade  { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:none} }
+    @keyframes float     { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+    @keyframes eyeBlink  { 0%,93%,100%{transform:scaleY(1)} 96.5%{transform:scaleY(0.1)} }
+    @keyframes orbitA    { from{transform:rotate(0deg)   translateX(72px) rotate(0deg)}   to{transform:rotate(360deg)   translateX(72px)  rotate(-360deg)} }
+    @keyframes orbitB    { from{transform:rotate(120deg) translateX(88px) rotate(-120deg)} to{transform:rotate(480deg)  translateX(88px)  rotate(-480deg)} }
+    @keyframes orbitC    { from{transform:rotate(240deg) translateX(60px) rotate(-240deg)} to{transform:rotate(600deg)  translateX(60px)  rotate(-600deg)} }
     `
     
     // ── atoms ────────────────────────────────────────────────────────────────────
