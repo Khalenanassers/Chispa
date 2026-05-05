@@ -762,6 +762,7 @@
     
       const renderDiscovery = () => (
         <>
+          <ChispaHeader />
           <div style={{ flex: 1, overflowY: 'auto', padding: '24px 24px 8px' }}>
             {messages.slice(-6).map(m => (
               <Bubble key={m.id} msg={m} animate={m.id === lastAnimId} />
@@ -786,7 +787,9 @@
       )
     
       const renderPick = () => (
-        <div style={{ flex: 1, overflowY: 'auto', padding: '40px 24px 32px' }}>
+        <>
+          <ChispaHeader />
+          <div style={{ flex: 1, overflowY: 'auto', padding: '40px 24px 32px' }}>
           <p style={{
             fontSize: 11, fontWeight: 600, letterSpacing: '0.1em',
             textTransform: 'uppercase', color: 'var(--muted)',
@@ -838,12 +841,14 @@
             )
           })}
         </div>
+        </>
       )
-    
+
       const winMessages = messages.slice(winOffset).slice(-6)
     
       const renderWin = () => (
         <>
+          <ChispaHeader />
           {/* Use case pill header */}
           <div style={{
             padding: '20px 24px 0',
@@ -940,7 +945,9 @@
       )
     
       const renderPill = () => (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '40px 24px 48px', overflowY: 'auto' }}>
+        <>
+          <ChispaHeader />
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '40px 24px 48px', overflowY: 'auto' }}>
           {loading && !pill ? (
             <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><Dots /></div>
           ) : pill ? (
@@ -1003,8 +1010,9 @@
             </button>
           )}
         </div>
+        </>
       )
-    
+
       const handleSaveAndCopy = () => {
         handleSaveMap()
         setCopied(true)
@@ -1012,6 +1020,8 @@
       }
     
       const renderMap = () => (
+        <>
+          <ChispaHeader />
           <div style={{ flex: 1, overflowY: 'auto', padding: '40px 24px 48px' }}>
             {loading && !mapSteps.length ? (
               <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><Dots /></div>
@@ -1094,8 +1104,9 @@
               </>
             )}
           </div>
+        </>
       )
-    
+
       // ── render ─────────────────────────────────────────────────────────────────
     
       return (
