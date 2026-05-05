@@ -973,11 +973,15 @@
               animation: `pillPulse 0.6s ${ease}`,
             }}>
               <span style={{
-                display: 'inline-block', fontSize: 13, fontWeight: 600,
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                fontSize: 13, fontWeight: 600,
                 color: 'var(--highlight)', letterSpacing: '0.06em',
                 marginBottom: 28,
               }}>
-                💡 What just happened:
+                <svg width="14" height="14" viewBox="-12 -12 24 24" style={{ flexShrink: 0 }}>
+                  <path d="M0,-11 L2.75,-2.75 L11,0 L2.75,2.75 L0,11 L-2.75,2.75 L-11,0 L-2.75,-2.75 Z" fill="#e9c46a"/>
+                </svg>
+                What just happened:
               </span>
     
               <p style={{
