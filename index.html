@@ -333,6 +333,26 @@
       )
     }
 
+    function ProgressDots({ screen }) {
+      const idx = { discovery: 0, pick: 1, win: 2, pill: 3 }[screen]
+      if (idx === undefined) return null
+      return (
+        <div style={{
+          position: 'fixed', bottom: 16, left: 0, right: 0,
+          display: 'flex', justifyContent: 'center', gap: 6,
+          pointerEvents: 'none', zIndex: 10,
+        }}>
+          {Array.from({ length: 6 }, (_, i) => (
+            <div key={i} style={{
+              width: 8, height: 8, borderRadius: '50%',
+              background: i === idx ? '#e76f51' : '#3d5a66',
+              transition: 'background 0.3s ease-in-out',
+            }} />
+          ))}
+        </div>
+      )
+    }
+
     // ── shell wrapper ────────────────────────────────────────────────────────────
     
     const shell = {
@@ -1132,8 +1152,9 @@
     
       return (
         <div style={shell}>
+          <ProgressDots screen={screen} />
           {euforia && <Euforia msg={euforiaMsg} fadingOut={euforiaOut} />}
-    
+
           {screen === 'landing'    && renderLanding()}
           {screen === 'discovery'  && renderDiscovery()}
           {screen === 'pick'       && renderPick()}
