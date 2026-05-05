@@ -702,20 +702,23 @@
           animation: `fadeIn 0.4s ${ease}`,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 52 }}>
-            <span style={{ fontSize: 26, color: 'var(--primary)' }}>✦</span>
+            <svg width="20" height="20" viewBox="-12 -12 24 24" style={{ flexShrink: 0 }}>
+              <path d="M0,-11 L2.75,-2.75 L11,0 L2.75,2.75 L0,11 L-2.75,2.75 L-11,0 L-2.75,-2.75 Z" fill="#e76f51"/>
+            </svg>
             <span style={{ fontFamily: "'Syne',sans-serif", fontWeight: 800, fontSize: 26, color: 'var(--primary)' }}>
               Chispa
             </span>
           </div>
     
           <div style={{ textAlign: 'center', marginBottom: 28 }}>
-            <LandingCharacter />
+            <LandingCharacter size={charSize} />
           </div>
 
           <h1 style={{
             fontFamily: "'Syne',sans-serif", fontWeight: 800,
             fontSize: 36, color: 'var(--text)',
             lineHeight: 1.1, marginBottom: 20,
+            animation: 'fadeSlideUp 0.5s ease-in-out 0.2s both',
           }}>
             Start your AI<br />
             journey with a<br />
@@ -733,12 +736,13 @@
               placeholder="I work as a…"
               autoFocus
               style={{
-                width: '100%', padding: '15px 18px', borderRadius: 12,
+                width: '100%', padding: '15px 18px', borderRadius: 16,
                 border: '1px solid var(--border)',
                 background: 'var(--surface)', color: 'var(--text)',
                 fontSize: 16, outline: 'none', marginBottom: 12,
                 fontFamily: 'system-ui,-apple-system,sans-serif',
                 minHeight: 52, transition: 'border-color 0.2s',
+                animation: 'fadeSlideUp 0.5s ease-in-out 0.4s both',
               }}
               onFocus={e => { e.target.style.borderColor = 'var(--primary)' }}
               onBlur={e => { e.target.style.borderColor = 'var(--border)' }}
@@ -747,17 +751,20 @@
               type="submit"
               disabled={!input.trim()}
               style={{
-                width: '100%', padding: '15px', borderRadius: 12, border: 'none',
-                background: input.trim() ? 'var(--primary)' : 'var(--surface)',
-                color: input.trim() ? '#fff' : 'var(--muted)',
+                width: '100%', padding: '15px', borderRadius: 16, border: 'none',
+                background: '#e76f51',
+                color: '#264653',
                 fontFamily: "'Syne',sans-serif", fontWeight: 800,
-                fontSize: 17, cursor: input.trim() ? 'pointer' : 'not-allowed',
-                transition: 'background 0.2s, color 0.2s', minHeight: 52,
+                fontSize: 18, cursor: input.trim() ? 'pointer' : 'not-allowed',
+                transition: 'background 0.2s, opacity 0.2s',
+                height: 56,
+                opacity: input.trim() ? 1 : 0.5,
+                animation: 'fadeSlideUp 0.5s ease-in-out 0.5s both',
               }}
               onMouseEnter={e => { if (input.trim()) e.currentTarget.style.background = 'var(--accent)' }}
-              onMouseLeave={e => { if (input.trim()) e.currentTarget.style.background = 'var(--primary)' }}
+              onMouseLeave={e => { if (input.trim()) e.currentTarget.style.background = '#e76f51' }}
             >
-              Let's go →
+              Let's Go ⚡
             </button>
           </form>
         </div>
