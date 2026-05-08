@@ -11,7 +11,9 @@ const STYLES = `
   --highlight: #e9c46a; --text: #f1faee; --muted: #a8b8bc; --border: #3d5a66;
   --user-msg: #c25240;
 }
-html, body { height: 100%; background: var(--bg); }
+html, body { height: 100%; background: radial-gradient(ellipse at 50% 40%, #2e5566 0%, #264653 45%, #1d3840 100%); }
+.app-shell::before { content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 0; background-image: radial-gradient(circle, #e9c46a 1px, transparent 1px), radial-gradient(circle, #e76f51 1px, transparent 1px); background-size: 120px 120px, 80px 80px; background-position: 0 0, 40px 40px; opacity: 0.04; }
+.app-shell > * { position: relative; z-index: 1; }
 @keyframes slideUp   { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:none} }
 @keyframes fadeIn    { from{opacity:0} to{opacity:1} }
 @keyframes fadeOut   { from{opacity:1} to{opacity:0} }
@@ -21,6 +23,15 @@ html, body { height: 100%; background: var(--bg); }
 `
 
 // ── atoms ────────────────────────────────────────────────────────────────────
+
+function AvatarSVG({ size = 32 }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width={size} height={size} style={{ display: 'block' }}>
+      <path d="M55 29 A22 22 0 1 0 55 51" stroke="#e76f51" strokeWidth="13" fill="none" strokeLinecap="round"/>
+      <polygon points="63,36 67,40 63,44 59,40" fill="#e9c46a"/>
+    </svg>
+  )
+}
 
 function Dots() {
   return (
@@ -65,10 +76,9 @@ function Bubble({ msg, animate = false }) {
       animation: `fadeIn 0.3s ${ease}`,
     }}>
       {!user && (
-        <div style={{
-          width: 10, height: 10, borderRadius: '50%', background: 'var(--primary)',
-          flexShrink: 0, marginBottom: 4,
-        }} />
+        <div style={{ flexShrink: 0, marginBottom: 2 }}>
+          <AvatarSVG size={32} />
+        </div>
       )}
       <div style={{
         maxWidth: '78%', padding: '10px 14px',
@@ -204,7 +214,7 @@ const shell = {
   margin: '0 auto',
   minHeight: '100dvh',
   display: 'flex', flexDirection: 'column',
-  background: 'var(--bg)',
+  background: 'radial-gradient(ellipse at 50% 40%, #2e5566 0%, #264653 45%, #1d3840 100%)',
   position: 'relative', overflow: 'hidden',
 }
 
@@ -631,7 +641,7 @@ export default function Chispa() {
         ))}
         {loading && (
           <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginBottom: 12 }}>
-            <div style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--primary)', flexShrink: 0, marginBottom: 4 }} />
+            <div style={{ flexShrink: 0, marginBottom: 2 }}><AvatarSVG size={24} /></div>
             <div style={{ padding: '8px 14px', background: 'var(--surface)', borderRadius: '4px 18px 18px 18px', border: '1px solid var(--border)' }}>
               <Dots />
             </div>
@@ -733,7 +743,7 @@ export default function Chispa() {
             ))}
             {loading && (
               <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginBottom: 12 }}>
-                <div style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--primary)', flexShrink: 0, marginBottom: 4 }} />
+                <div style={{ flexShrink: 0, marginBottom: 2 }}><AvatarSVG size={24} /></div>
                 <div style={{ padding: '8px 14px', background: 'var(--surface)', borderRadius: '4px 18px 18px 18px', border: '1px solid var(--border)' }}>
                   <Dots />
                 </div>
@@ -962,7 +972,7 @@ export default function Chispa() {
   // ── render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div style={shell}>
+    <div style={shell} className="app-shell">
       {euforia && <Euforia msg={euforiaMsg} fadingOut={euforiaOut} />}
 
       {screen === 'landing'    && renderLanding()}

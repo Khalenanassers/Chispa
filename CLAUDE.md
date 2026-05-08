@@ -26,6 +26,9 @@ At the start of every session, invoke these skills in order:
 .venv\Scripts\activate
 pip install -r requirements.txt
 
+# .env (create at project root — only this key is needed)
+# GOOGLE_API_KEY=your_key_here
+
 # Run backend (requires GOOGLE_API_KEY in .env)
 uvicorn server:app --reload
 
@@ -47,9 +50,11 @@ Three files carry all application logic:
 
 **`chispa_core.py`** — pure stage functions, no HTTP. Each stage is one exported `run_*` function (`run_discovery`, `run_pick_confirm`, `run_win_open`, `run_win_execute`, `run_win_confirm`, `run_pill`, `run_map`). Also exports `select_pill` (rule-based, no AI) and `build_history`/`build_client` helpers. All AI calls go through the internal `_call()` helper which retries once on empty response. `run_win_execute` makes an extra low-temperature self-critique call via `_quality_check()` and silently regenerates on failure.
 
-**`server.py`** — stateless FastAPI. Endpoints: `GET /health` (model name check), `POST /api/chat` (main). The `stage` string routes to the matching `run_*` function. **The frontend owns all state** — it sends `variables` (a dict) on every request and receives it back updated. `selected_use_case` is set by the frontend (user taps a card), not by any AI call. `build_history()` converts `list[dict]` wire format into `list[types.Content]` on every request.
+**`server.py`** — stateless FastAPI. Endpoints: `GET /` (serves `index.html`), `GET /health` (model name check), `POST /api/chat` (main). The `stage` string routes to the matching `run_*` function. **The frontend owns all state** — it sends `variables` (a dict) on every request and receives it back updated. `selected_use_case` is set by the frontend (user taps a card), not by any AI call. `build_history()` converts `list[dict]` wire format into `list[types.Content]` on every request.
 
-**`Chispa.jsx`** — single-file React component. All 6 screens, design tokens, animations, and API calls in one file. Talks to `POST /api/chat`. Manages all conversation state client-side.
+**`index.html`** — deployed frontend (~1170 lines, self-contained). All 6 screens, design tokens, animations, and API calls in one file. Served by `GET /`, talks to `POST /api/chat`, manages all conversation state client-side. **`Chispa.jsx`** (~976 lines, also at project root) is the React source equivalent — edit this for development. There is no automated build step: changes made in `Chispa.jsx` must be manually ported into `index.html` (the JSX is inlined as a `<script type="text/babel">` block). The `frontend/` and `backend/` directories are empty scaffolding and unused.
+
+**`chispa_notebook.ipynb`** — Kaggle notebook for hosted deployment. Handles ngrok tunnel, secret injection, and server startup. Edit this when changing the Kaggle hosting setup.
 
 Stage routing in `server.py` (linear, no branching):
 
@@ -83,6 +88,8 @@ The product is built around a single emotional peak: *euforia* — the moment Ro
 | `chispa_prompt_spec.md` | THE BRAIN — all prompt text, stage logic, API calls | Building the backend / Python |
 | `chispa_ux_brief.md` | THE BODY — 6 screens, design tokens, motion rules | Building the frontend / React |
 | `chispa_studio_handover.md` | Build order — step-by-step sequence | Orienting on where to start |
+| `docs/superpowers/specs/` | Design decisions and technical specs per feature | Understanding why something was built a certain way |
+| `docs/superpowers/plans/` | Step-by-step implementation plans from past sessions | Resuming or reviewing prior work |
 
 ---
 
@@ -117,8 +124,10 @@ STAGE 5 — THE MAP         (3 personalized next steps, auto-fires after pill)
 user_input → role → language → use_cases[3]
            → selected_use_case → user_task_details
            → task_output → task_output_summary  (first 2 sentences of task_output)
-           → pill_id → pill_concept_name → map[3]
+           → pill_id → map[3]
 ```
+
+`pill_id` (1–4) is the only pill variable stored in `variables`. Pill concept name is resolved internally in `run_map` via `_PILL_NAMES` dict — never stored in `variables`.
 
 Pass the **full conversation history** on every API call.
 
