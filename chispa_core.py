@@ -19,6 +19,7 @@ DISCOVER → PICK → WIN → PILL → MAP
 You know which stage you are in. The user does not need to know."""
 
 MODEL = "gemma-4-26b-a4b-it"
+FALLBACK_MODEL = "gemini-2.5-flash"
 TEMPERATURE = 0.7
 MAX_TOKENS = 1024
 
@@ -44,15 +45,19 @@ def _call(client: genai.Client, contents, response_json: bool = False) -> str:
         max_output_tokens=MAX_TOKENS,
         **({"response_mime_type": "application/json"} if response_json else {}),
     )
-    for attempt in range(2):
-        response = client.models.generate_content(
-            model=MODEL,
-            config=config,
-            contents=contents,
-        )
-        text = response.text or ""
-        if text.strip():
-            return text
+    for model in (MODEL, FALLBACK_MODEL):
+        try:
+            for _ in range(2):
+                response = client.models.generate_content(
+                    model=model,
+                    config=config,
+                    contents=contents,
+                )
+                text = response.text or ""
+                if text.strip():
+                    return text
+        except Exception:
+            continue  # primary down — try fallback
     return ""  # caller handles empty — server returns HTTP 500
 
 
