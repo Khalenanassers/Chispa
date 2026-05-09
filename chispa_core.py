@@ -1,6 +1,8 @@
 import json
+import time
 from google import genai
 from google.genai import types
+from google.genai import errors as genai_errors
 
 SYSTEM_PROMPT = """You are Chispa — a warm, direct AI companion for working adults who are scared of AI.
 Your only job is to guide this person to their first real win with AI in under 20 minutes.
@@ -39,14 +41,23 @@ def build_history(turns: list[dict]) -> list[types.Content]:
 
 
 def _call(client: genai.Client, contents, response_json: bool = False) -> str:
+    if response_json:
+        last = contents[-1]
+        hint = "\n\nReturn ONLY valid JSON. No markdown. No backticks. No preamble."
+        contents = list(contents[:-1]) + [
+            types.Content(role=last.role, parts=[types.Part(text=last.parts[0].text + hint)])
+        ]
+
     config = types.GenerateContentConfig(
         system_instruction=SYSTEM_PROMPT,
         temperature=TEMPERATURE,
         max_output_tokens=MAX_TOKENS,
-        **({"response_mime_type": "application/json"} if response_json else {}),
     )
+
+    last_err = None
     for model in (MODEL, FALLBACK_MODEL):
-        for _ in range(2):
+        for attempt in range(3):
+            print(f"[Chispa] Attempt {attempt + 1}/3...", flush=True)
             try:
                 response = client.models.generate_content(
                     model=model,
@@ -54,11 +65,20 @@ def _call(client: genai.Client, contents, response_json: bool = False) -> str:
                     contents=contents,
                 )
                 text = response.text or ""
-            except Exception:
-                break  # model is down — skip to next model
+            except genai_errors.ServerError as e:
+                last_err = e
+                if attempt < 2:
+                    time.sleep(5)
+                continue  # retry same model
+            except Exception as e:
+                last_err = e
+                break  # non-server error — skip to next model
             if text.strip():
                 return text
-    return ""  # caller handles empty — server returns "Give me a second"
+
+    if last_err:
+        raise RuntimeError(f"[Chispa] All models failed. Last error: {last_err}") from last_err
+    return ""  # all models returned empty — server returns "Give me a second"
 
 
 _GENERIC_PHRASES = [
