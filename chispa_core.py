@@ -114,6 +114,9 @@ Return ONLY valid JSON. No explanation. No preamble.
                 continue
             raise ValueError(f"run_discovery: Gemma 4 returned invalid JSON after 2 attempts: {raw}")
 
+        if isinstance(data, list):
+            data = {"role": "unknown", "language": "en", "use_cases": data}
+
         if _is_generic(data.get("use_cases", [])) and attempt == 0:
             continue
 
