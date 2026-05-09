@@ -46,19 +46,19 @@ def _call(client: genai.Client, contents, response_json: bool = False) -> str:
         **({"response_mime_type": "application/json"} if response_json else {}),
     )
     for model in (MODEL, FALLBACK_MODEL):
-        try:
-            for _ in range(2):
+        for _ in range(2):
+            try:
                 response = client.models.generate_content(
                     model=model,
                     config=config,
                     contents=contents,
                 )
                 text = response.text or ""
-                if text.strip():
-                    return text
-        except Exception:
-            continue  # primary down — try fallback
-    return ""  # caller handles empty — server returns HTTP 500
+            except Exception:
+                break  # model is down — skip to next model
+            if text.strip():
+                return text
+    return ""  # caller handles empty — server returns "Give me a second"
 
 
 _GENERIC_PHRASES = [
