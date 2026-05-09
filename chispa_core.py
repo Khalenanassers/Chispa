@@ -2,7 +2,7 @@ import json
 import time
 from google import genai
 from google.genai import types
-from google.genai import errors as genai_errors
+from google.genai.errors import ServerError
 
 SYSTEM_PROMPT = """You are Chispa — a warm, direct AI companion for working adults who are scared of AI.
 Your only job is to guide this person to their first real win with AI in under 20 minutes.
@@ -41,44 +41,32 @@ def build_history(turns: list[dict]) -> list[types.Content]:
 
 
 def _call(client: genai.Client, contents, response_json: bool = False) -> str:
-    if response_json:
-        last = contents[-1]
-        hint = "\n\nReturn ONLY valid JSON. No markdown. No backticks. No preamble."
-        contents = list(contents[:-1]) + [
-            types.Content(role=last.role, parts=[types.Part(text=last.parts[0].text + hint)])
-        ]
-
     config = types.GenerateContentConfig(
         system_instruction=SYSTEM_PROMPT,
         temperature=TEMPERATURE,
         max_output_tokens=MAX_TOKENS,
     )
+    if response_json:
+        # Do NOT use response_mime_type — triggers 500 on Gemma
+        # JSON instruction lives in the caller's prompt text
+        pass
 
-    last_err = None
-    for model in (MODEL, FALLBACK_MODEL):
-        for attempt in range(3):
-            print(f"[Chispa] Attempt {attempt + 1}/3...", flush=True)
-            try:
-                response = client.models.generate_content(
-                    model=model,
-                    config=config,
-                    contents=contents,
-                )
-                text = response.text or ""
-            except genai_errors.ServerError as e:
-                last_err = e
-                if attempt < 2:
-                    time.sleep(5)
-                continue  # retry same model
-            except Exception as e:
-                last_err = e
-                break  # non-server error — skip to next model
-            if text.strip():
-                return text
-
-    if last_err:
-        raise RuntimeError(f"[Chispa] All models failed. Last error: {last_err}") from last_err
-    return ""  # all models returned empty — server returns "Give me a second"
+    last_error = None
+    for attempt in range(3):
+        try:
+            print(f"[Chispa] API call attempt {attempt + 1}/3...", flush=True)
+            response = client.models.generate_content(
+                model=MODEL,
+                config=config,
+                contents=contents,
+            )
+            return response.text.strip()
+        except ServerError as e:
+            last_error = e
+            if attempt < 2:
+                wait = (attempt + 1) * 5  # 5s, then 10s
+                time.sleep(wait)
+    raise last_error
 
 
 _GENERIC_PHRASES = [
