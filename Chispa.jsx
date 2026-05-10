@@ -20,6 +20,9 @@ html, body { height: 100%; background: radial-gradient(ellipse at 50% 40%, #2e55
 @keyframes pillPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.02)} }
 @keyframes dotBeat   { 0%,100%{opacity:.3;transform:scale(.8)} 50%{opacity:1;transform:scale(1.2)} }
 @keyframes lineFade  { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:none} }
+@keyframes float     { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+@keyframes sparkFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+@keyframes fadeSlideUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
 `
 
 // ── atoms ────────────────────────────────────────────────────────────────────
@@ -207,6 +210,45 @@ function Euforia({ msg, fadingOut }) {
   )
 }
 
+// ── landing character ────────────────────────────────────────────────────────
+
+function DiamondSpark() {
+  return (
+    <svg width="72" height="120" viewBox="0 0 72 120" style={{ display: 'block', overflow: 'visible' }}>
+      {/* Left shadow facet */}
+      <polygon points="36,0 4,48 36,72" fill="#c25240" />
+      {/* Right shadow facet */}
+      <polygon points="36,0 68,48 36,72" fill="#c25240" />
+      {/* Bottom shadow facet */}
+      <polygon points="4,48 36,72 36,120" fill="#c25240" opacity="0.7" />
+      {/* Bottom shadow facet right */}
+      <polygon points="68,48 36,72 36,120" fill="#c25240" opacity="0.5" />
+      {/* Left main facet */}
+      <polygon points="36,0 4,48 36,60" fill="#e76f51" />
+      {/* Right main facet */}
+      <polygon points="36,0 68,48 36,60" fill="#e76f51" />
+      {/* Bottom left facet */}
+      <polygon points="4,48 36,60 36,120" fill="#d4644a" />
+      {/* Bottom right facet */}
+      <polygon points="68,48 36,60 36,120" fill="#c85840" />
+      {/* Center highlight */}
+      <polygon points="36,8 20,44 36,56 52,44" fill="#e9c46a" opacity="0.9" />
+      {/* Top highlight */}
+      <polygon points="36,0 28,20 36,28 44,20" fill="#f5d485" opacity="0.8" />
+    </svg>
+  )
+}
+
+function LandingCharacter() {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'center' }}>
+      <div style={{ animation: 'sparkFloat 3s ease-in-out infinite' }}>
+        <DiamondSpark />
+      </div>
+    </div>
+  )
+}
+
 // ── shell wrapper ────────────────────────────────────────────────────────────
 
 const shell = {
@@ -240,6 +282,7 @@ export default function Chispa() {
   const [fixMode, setFixMode]         = useState(false)
   const [selectedCard, setSelectedCard] = useState(null)
   const [copied, setCopied]             = useState(false)
+  const [charSize]                      = useState(() => window.innerHeight < 700 ? 110 : 140)
 
   const scrollRef   = useRef(null)
   const messagesRef = useRef(messages)
@@ -455,27 +498,33 @@ export default function Chispa() {
   }
 
   const handleWinConfirm = async () => {
-    // Trigger euforia
+    console.log('[Chispa] ✓ clicked — calling win_confirm')
     setEuforia(true)
     setEuforiaMsg('')
 
+    console.log('[Chispa] win_confirm fetch start')
     const result = await callAPI('win_confirm', messages, apiVars, '')
+    console.log('[Chispa] win_confirm result:', result)
     if (result?.text) setEuforiaMsg(result.text)
 
-    // Auto-transition after 2.5s
     setTimeout(() => {
       setEuforiaOut(true)
       setTimeout(async () => {
         setEuforia(false)
         setEuforiaOut(false)
 
-        // Call pill stage
-        const pillResult = await callAPI('pill', messages, { ...apiVars, ...result?.vars }, '')
+        // Switch to pill screen immediately so user sees loading state
+        setScreen('pill')
+        console.log('[Chispa] switching to pill screen, calling pill API')
+
+        const pillVars = { ...apiVars, ...result?.vars }
+        const pillResult = await callAPI('pill', messagesRef.current, pillVars, '')
+        console.log('[Chispa] pill result:', pillResult)
         if (pillResult?.text) {
           setPill(parsePill(pillResult.text))
           setApiVars(v => ({ ...v, ...pillResult.vars }))
         }
-        setScreen('pill')
+        console.log('[Chispa] screen set to pill')
       }, 400)
     }, 2500)
   }
@@ -582,6 +631,10 @@ export default function Chispa() {
         <span style={{ fontFamily: "'Syne',sans-serif", fontWeight: 800, fontSize: 26, color: 'var(--primary)' }}>
           Chispa
         </span>
+      </div>
+
+      <div style={{ textAlign: 'center', marginBottom: 28 }}>
+        <LandingCharacter size={charSize} />
       </div>
 
       <h1 style={{
