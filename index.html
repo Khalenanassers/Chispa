@@ -328,11 +328,23 @@
       )
     }
 
-    function LandingCharacter() {
+    function LandingCharacter({ size = 140 }) {
+      const h = Math.round(size * 160 / 140)
+      const orb = (anim, sz) => ({
+        position: 'absolute',
+        top: '63%', left: '50%',
+        marginTop: -(sz / 2), marginLeft: -(sz / 2),
+        transformOrigin: `${sz / 2}px ${sz / 2}px`,
+        animation: `${anim} ease-in-out infinite`,
+        pointerEvents: 'none',
+      })
       return (
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <div style={{ animation: 'sparkFloat 3s ease-in-out infinite' }}>
-            <DiamondSpark />
+        <div style={{ position: 'relative', width: size, height: h, display: 'inline-block' }}>
+          <div style={{ ...orb('orbitA 8s',  8),  opacity: 0.8 }}><StarShape size={8}  /></div>
+          <div style={{ ...orb('orbitB 12s', 12), opacity: 0.9 }}><StarShape size={12} /></div>
+          <div style={{ ...orb('orbitC 6s',  6),  opacity: 0.7 }}><StarShape size={6}  /></div>
+          <div style={{ animation: 'float 3s ease-in-out infinite', position: 'relative', zIndex: 1 }}>
+            <ChispaSVG size={size} animated={true} />
           </div>
         </div>
       )

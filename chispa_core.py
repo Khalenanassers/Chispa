@@ -210,7 +210,6 @@ Output to score:
     config = types.GenerateContentConfig(
         temperature=0.1,
         max_output_tokens=50,
-        response_mime_type="application/json",
     )
     response = client.models.generate_content(
         model=MODEL,
