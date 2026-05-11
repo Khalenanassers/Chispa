@@ -34,21 +34,21 @@
 
 ### STEP 3 — Build the full prompt chain in a notebook (Day 2–3)
 **Where:** Kaggle Notebook
-**Give Claude:** `chispa_prompt_spec.md` + this instruction:
+**Provide the AI:** `chispa_prompt_spec.md` + this instruction:
 
 > "Build a Python script that runs the full Chispa conversation flow using the Google AI Studio API. Use the prompt spec exactly as written. Stages 0–5. Store all variables. Pass full conversation history on each call."
 
 ---
 
 ### STEP 4 — Build the UI (Day 5–7)
-**Give Claude:** `chispa_ux_brief.md` + this instruction:
+**Provide the AI:** `chispa_ux_brief.md` + this instruction:
 
 > "Build a single-file React component (JSX) that implements the Chispa UI exactly as described in this brief. All 6 screens. Use the design system tokens defined. Connect to the Python backend via fetch calls."
 
 ---
 
 ### STEP 5 — Connect and test end-to-end (Day 7)
-**Give Claude both files + this instruction:**
+**Provide the AI both files + this instruction:**
 
 > "Connect the Chispa React frontend to the Python backend. The frontend should call /api/chat with the full conversation history on each user message. The backend runs the prompt chain from the spec. Test the full flow: landing → discovery → pick → win → pill → map."
 

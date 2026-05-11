@@ -1,125 +1,93 @@
-![License](https://img.shields.io/badge/license-Proprietary-red)
-![Hackathon](https://img.shields.io/badge/Gemma%204%20Good%20Hackathon-Kaggle%20%C3%97%20Google%20DeepMind-blue)
-![Track](https://img.shields.io/badge/track-Digital%20Equity-green)
+# Chispa
 
-# Chispa ✦
-
-**An AI companion that takes a working adult from fear to their first real win with AI — in under 20 minutes.**
-
-Built for the [Gemma 4 Good Hackathon](https://www.kaggle.com/competitions/gemma-4-good) · Kaggle × Google DeepMind · Digital Equity track.
+**A multilingual AI companion that takes working adults from fear to their first win with AI — in one session, around their specific job.**
 
 ---
 
 ## The Problem
 
-Millions of working adults — especially those 40–55 years old — are watching AI reshape their industries. They feel the threat. They have no time, no money for bootcamps, and no safe place to start.
-
-Most upskilling tools are built *for* tech-savvy people *about* tech topics. The people who most need AI literacy are the last to get it.
-
-**This is not an education problem. It is an economic survival problem.**
+Millions of working adults are watching AI reshape their industries with no time, money, or safe space to start. Most upskilling tools are built for tech-savvy people about tech topics. The people who need AI literacy most are the last to get it.
 
 ---
 
-## The Solution
+## What Chispa Does
 
-Chispa (Spanish: *spark*) meets users at the moment before they give up — and turns it into their first win.
+Chispa guides users through one real task using AI — drafting an email, summarizing a document, structuring a recap. After the win, it explains what just happened (one concept, one analogy, one question). Then it gives them three next steps specific to their job.
 
-It is not a course. Not a chatbot. Not a tool directory. It is an **onboarding experience for real life.**
-
-```
-"What do you do for work?"
-        ↓
-Gemma 4 maps their job to 3 real, concrete AI uses
-        ↓
-User picks the one that fits right now
-        ↓
-Chispa walks them through it — live, together
-        ↓
-They produce something real
-        ↓
-✦ EUFORIA — the spark
-        ↓
-The Pill: one concept, one analogy, one question
-        ↓
-The Map: 3 personalized next steps for this week
-```
-
-The knowledge pill lands *after* the win, not before. The win creates the context; the pill creates the understanding.
+The session takes 20 minutes. No account. No install. Works in any phone browser.
 
 ---
 
-## Who It's For
+## The Core Loop
 
-**Rosa, 45.** Office clerk. Two kids. Her job is her family's income. She's heard AI is going to change everything. She has 20 minutes and a lot of fear.
-
-- Non-technical. No coding background.
-- Multilingual — may not be an English native speaker.
-- Time-poor. Won't finish a 10-hour course.
-- Has real daily tasks: emails, reports, scheduling, documents.
-
-Chispa reaches Rosa through people she already trusts: HR departments sharing it during "AI readiness" briefings, union newsletters, multilingual WhatsApp groups. No app store. No account. Just a shared link.
+- User describes their job
+- Gemma 4 maps it to 3 concrete AI use cases
+- User picks one
+- Chispa guides them through doing it live
+- User produces a real output
+- Chispa delivers one knowledge concept (the Pill)
+- Chispa delivers 3 personalized next steps (the Map)
 
 ---
 
-## Technical Stack
+## Built With
 
 | Layer | Technology |
 |---|---|
-| Model | Gemma 4 26B MoE via Google AI Studio API |
-| Backend | Python — FastAPI (`server.py`) |
-| Frontend | React JSX, single-file (`index.html`) |
-| Hosting | Kaggle Notebook (primary), Hugging Face Spaces |
-
-**Why Gemma 4:** Multilingual by default (35+ languages), open-weight so it can run locally — meaning sensitive workplace data never has to leave the user's device. That's not a technical detail. It's why a 45-year-old office clerk can use this at work without asking IT.
+| Model | Gemma 4 26B MoE via Google AI Studio API (`gemma-4-26b-a4b-it`) |
+| Backend | Python + FastAPI |
+| Frontend | React (single-file, CDN) |
+| Notebook | Kaggle (free GPU tier, T4) |
+| Tunnel | ngrok (for public URL from Kaggle) |
 
 ---
 
-## Running Locally
+## Why Gemma 4
 
+- Native multilingual support (35+ languages) — auto-detects user language
+- Multimodal — users can upload documents
+- On-device capable (E4B architecture) — user data can stay local in v2
+- Apache 2.0 license — no commercial restrictions
+
+---
+
+## How to Run (Local)
+
+**Terminal 1 — Backend:**
 ```bash
-# 1. Clone and set up
-git clone https://github.com/Khalenanassers/Chispa.git
 cd Chispa
-python -m venv .venv
-.venv\Scripts\activate        # Windows
-pip install -r requirements.txt
-
-# 2. Add your API key
-echo GOOGLE_API_KEY=your_key_here > .env
-
-# 3. Start the server
-uvicorn server:app --reload
-
-# 4. Open http://localhost:8000
+python server.py
 ```
+Runs at `http://localhost:8000`
 
----
-
-## Running Tests
-
+**Terminal 2 — Frontend:**
 ```bash
-pytest          # all tests (no API key required — all mocked)
-pytest tests/test_server.py -v
+npm run dev
 ```
+Opens at `http://localhost:5173`
 
 ---
 
-## Six Screens, One Emotional Arc
+## How to Run (Kaggle)
 
-| Screen | Emotional job |
-|---|---|
-| 1 · Landing | Reduce fear, zero friction |
-| 2 · Discovery | Make the user feel heard |
-| 3 · Pick | Make choosing feel exciting |
-| 4 · The Win | Build momentum → euforia |
-| 5 · The Pill | Create the "aha" |
-| 6 · The Map | Leave with direction, not overwhelm |
+1. Open `chispa_notebook_v2.ipynb` in Kaggle
+2. Add your Google AI Studio API key in Cell 1
+3. Run All (cells in order)
+4. Cell 9 prints the public ngrok URL
+5. Open on phone to demo
+
+---
+
+## Hackathon
+
+Gemma 4 Good Hackathon · Kaggle × Google DeepMind  
+Track: Digital Equity  
+Deadline: May 18, 2026
 
 ---
 
 ## License
 
-Copyright (c) 2026 Khalena Nasser. All Rights Reserved.
-See [LICENSE](LICENSE) for full terms.
-
-This project is shared for hackathon evaluation only. Forking, redistribution, and derivative works are prohibited.
+All rights reserved — Khalena Nasser.  
+Permitted for hackathon evaluation only.  
+Contact: [khalenanasser.com](https://khalenanasser.com)

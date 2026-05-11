@@ -19,7 +19,7 @@
 ## File Structure
 
 ```
-D:\Claude\Chispa\
+Chispa/
 ├── chispa_core.py          ← stage logic, pure functions, no HTTP
 ├── server.py               ← FastAPI app, imports chispa_core
 ├── chispa_notebook.ipynb   ← Kaggle submission, imports/inlines chispa_core
