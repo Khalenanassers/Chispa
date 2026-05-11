@@ -421,6 +421,7 @@
       const [euforiaMsg, setEuforiaMsg]   = useState('')
       const [euforiaOut, setEuforiaOut]   = useState(false)
       const [fixMode, setFixMode]         = useState(false)
+      const [winConfirmed, setWinConfirmed] = useState(false)
       const [selectedCard, setSelectedCard] = useState(null)
       const [copied, setCopied]             = useState(false)
     
@@ -608,36 +609,30 @@
       const handleWinSend = async (text) => {
         setInput('')
         setFixMode(false)
-    
+
         const userMsg = mkMsg('user', text)
         const newHistory = [...messages, userMsg]
         setMessages(newHistory)
-    
+
         const vars = { ...apiVars, user_task_details: text }
         const result = await callAPI('win_execute', newHistory, vars, text)
-    
+
         if (!result) {
           const errMsg = mkMsg('model', "Give me a second — I'm thinking.")
           setMessages(h => [...h, errMsg])
           setLastAnimId(errMsg.id)
           return
         }
-    
-        const resp = result.text
-        // Output detection: long text (>100 chars) that doesn't end with "?"
-        const trimmed = resp.trim()
-        if (trimmed.length > 100 && !trimmed.endsWith('?')) {
-          setTaskOutput(resp)
-          setWinPhase('output')
-          setApiVars({ ...vars, ...result.vars, task_output: resp })
-        } else {
-          const aiMsg = mkMsg('model', resp)
-          setMessages(h => [...h, aiMsg])
-          setLastAnimId(aiMsg.id)
-        }
+
+        // Always transition to output phase — frontend owns the stage, not the model
+        setTaskOutput(result.text)
+        setWinPhase('output')
+        setApiVars({ ...vars, ...result.vars, task_output: result.text })
       }
     
       const handleWinConfirm = async () => {
+        if (winConfirmed) return
+        setWinConfirmed(true)
         console.log('[Chispa] ✓ clicked — calling win_confirm')
         setEuforia(true)
         setEuforiaMsg('')
@@ -689,16 +684,10 @@
           return
         }
     
-        const trimmed = result.text.trim()
-        if (trimmed.length > 100 && !trimmed.endsWith('?')) {
-          setTaskOutput(result.text)
-          setWinPhase('output')
-          setApiVars({ ...vars, ...result.vars, task_output: result.text })
-        } else {
-          const aiMsg = mkMsg('model', result.text)
-          setMessages(h => [...h, aiMsg])
-          setLastAnimId(aiMsg.id)
-        }
+        // Always transition to output phase — frontend owns the stage, not the model
+        setTaskOutput(result.text)
+        setWinPhase('output')
+        setApiVars({ ...vars, ...result.vars, task_output: result.text })
       }
     
       const handlePillNext = async () => {
@@ -733,6 +722,7 @@
         setEuforiaMsg('')
         setEuforiaOut(false)
         setFixMode(false)
+        setWinConfirmed(false)
         setSelectedCard(null)
       }
     
@@ -981,15 +971,17 @@
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 4 }}>
                   <button
                     onClick={handleWinConfirm}
+                    disabled={winConfirmed}
                     style={{
                       width: '100%', padding: '15px', borderRadius: 12, border: 'none',
-                      background: 'var(--primary)', color: '#fff',
+                      background: winConfirmed ? 'var(--surface)' : 'var(--primary)',
+                      color: winConfirmed ? 'var(--muted)' : '#fff',
                       fontFamily: "'Syne',sans-serif", fontWeight: 800,
-                      fontSize: 16, cursor: 'pointer', minHeight: 52,
+                      fontSize: 16, cursor: winConfirmed ? 'default' : 'pointer', minHeight: 52,
                       transition: 'background 0.2s',
                     }}
-                    onMouseEnter={e => { e.currentTarget.style.background = 'var(--accent)' }}
-                    onMouseLeave={e => { e.currentTarget.style.background = 'var(--primary)' }}
+                    onMouseEnter={e => { if (!winConfirmed) e.currentTarget.style.background = 'var(--accent)' }}
+                    onMouseLeave={e => { if (!winConfirmed) e.currentTarget.style.background = 'var(--primary)' }}
                   >
                     ✓ This is great
                   </button>
