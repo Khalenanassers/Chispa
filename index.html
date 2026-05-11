@@ -1027,24 +1027,24 @@
               </span>
     
               <p style={{
-                fontFamily: "'Syne',sans-serif", fontWeight: 800,
-                fontSize: 22, color: 'var(--primary)',
-                lineHeight: 1.3, marginBottom: 24,
+                fontSize: 18, fontWeight: 600,
+                color: '#e76f51',
+                lineHeight: 1.4, marginBottom: 20,
               }}>
                 {pill.concept}
               </p>
-    
+
               {pill.analogy && (
                 <p style={{
-                  fontSize: 16, color: 'var(--text)', lineHeight: 1.65,
-                  fontStyle: 'italic', marginBottom: 24,
+                  fontSize: 16, fontWeight: 400, color: '#f1faee', lineHeight: 1.65,
+                  fontStyle: 'italic', marginBottom: 20,
                 }}>
                   {pill.analogy}
                 </p>
               )}
-    
+
               {pill.question && (
-                <p style={{ fontSize: 14, color: 'var(--muted)', lineHeight: 1.6 }}>
+                <p style={{ fontSize: 15, fontWeight: 400, color: '#a8b8bc', lineHeight: 1.6 }}>
                   {pill.question}
                 </p>
               )}
@@ -1154,6 +1154,28 @@
                   </button>
                 </div>
     
+                <div style={{
+                  background: '#1e363f', borderRadius: 12, padding: '20px', marginTop: 24,
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                    <svg width="12" height="12" viewBox="-12 -12 24 24" style={{ flexShrink: 0 }}>
+                      <path d="M0,-11 L2.75,-2.75 L11,0 L2.75,2.75 L0,11 L-2.75,2.75 L-11,0 L-2.75,-2.75 Z" fill="#e9c46a"/>
+                    </svg>
+                    <span style={{
+                      fontSize: 11, fontWeight: 600, color: '#a8b8bc',
+                      letterSpacing: '1.5px', textTransform: 'uppercase',
+                    }}>
+                      CHISPA GROWS WITH YOU
+                    </span>
+                  </div>
+                  <p style={{ fontSize: 15, color: '#f1faee', lineHeight: 1.6, marginBottom: 12 }}>
+                    With Chispa, you can keep discovering how AI gives you more time for what matters — and makes you indispensable at work.
+                  </p>
+                  <p style={{ fontSize: 13, color: '#a8b8bc', fontStyle: 'italic', lineHeight: 1.5 }}>
+                    Every session, Chispa learns your job better. Your path is yours.
+                  </p>
+                </div>
+
                 <p style={{
                   textAlign: 'center', fontSize: 14,
                   color: 'var(--muted)', fontStyle: 'italic',
